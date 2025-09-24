@@ -8,6 +8,10 @@ public enum ErrorCode {
     USER_ALREADY_EXIST(HttpStatus.ALREADY_REPORTED.value(), "이미 존재하는 유저입니다."),
     TOKEN_MISSING(HttpStatus.BAD_REQUEST.value(), "토큰이 존재하지 않습니다."),
     EXPIRED_TOKEN(HttpStatus.BAD_REQUEST.value(), "토큰이 만료되었습니다."),
+    INVALID_TOKEN_TYPE(HttpStatus.BAD_REQUEST.value(), "토큰 타입이 잘못되었습니다."),
+    INVALID_TOKEN_FORMAT(HttpStatus.BAD_REQUEST.value(), "토큰 형식이 잘못되었습니다."),
+    INVALID_TOKEN_SIGNATURE(HttpStatus.BAD_REQUEST.value(), "서명 토큰이 잘못되었습니다."),
+    INVALID_TOKEN_PARSING(HttpStatus.BAD_REQUEST.value(), "토큰 파싱이 잘못되었습니다"),
     ;
 
     private final int status;
