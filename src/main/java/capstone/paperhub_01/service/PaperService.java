@@ -150,6 +150,7 @@ public class PaperService {
     }
 
 
+    @Transactional
     public Paper setFingerprint(Long paperId, String fingerprint) {
         var paper = paperRepository.findById(paperId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
@@ -162,5 +163,20 @@ public class PaperService {
 
         paper.setFingerprint(fingerprint);
         return paper;
+    }
+
+    @Transactional(readOnly = true)
+    public Paper findBySha256OrFingerPrint(String sha256, String fingerprint) {
+        if(sha256 != null && !sha256.isBlank()){
+            return paperRepository.findBySha256(sha256)
+                    .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+
+        }
+
+        if(fingerprint != null && !fingerprint.isBlank()){
+            return paperRepository.findByFingerprint(fingerprint)
+                    .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+        }
+        throw new IllegalArgumentException("Either sha256 or fingerprint must be provided.");
     }
 }
