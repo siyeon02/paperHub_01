@@ -1,6 +1,7 @@
 package capstone.paperhub_01.domain.anchor;
 
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -9,6 +10,11 @@ import java.util.List;
 import java.util.Map;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "anchors",
         uniqueConstraints = @UniqueConstraint(name = "uq_anchor_sig",
                 columnNames = {"paperSha256", "page", "signature"}), // signature = quoteHash 또는 rects 해시
