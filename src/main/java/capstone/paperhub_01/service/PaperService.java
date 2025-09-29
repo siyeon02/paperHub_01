@@ -1,11 +1,14 @@
 package capstone.paperhub_01.service;
 
 import capstone.paperhub_01.controller.paper.response.PaperCreateResp;
+import capstone.paperhub_01.controller.paper.response.PaperViewResp;
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.Paper;
 import capstone.paperhub_01.domain.paper.config.FileStorageProperties;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
+import capstone.paperhub_01.ex.BusinessException;
+import capstone.paperhub_01.ex.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
@@ -138,4 +141,13 @@ public class PaperService {
     private static void putIfNotNull(Map<String, Object> map, String k, Object v) {
         if (v != null) map.put(k, v);
     }
+
+    @Transactional(readOnly = true)
+    public PaperViewResp getById(Long paperId) {
+        Paper paper = paperRepository.findById(paperId)
+                .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+        return PaperViewResp.from(paper);
+    }
+
+
 }

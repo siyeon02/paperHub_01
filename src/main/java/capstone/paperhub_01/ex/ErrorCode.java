@@ -12,6 +12,7 @@ public enum ErrorCode {
     INVALID_TOKEN_FORMAT(HttpStatus.BAD_REQUEST.value(), "토큰 형식이 잘못되었습니다."),
     INVALID_TOKEN_SIGNATURE(HttpStatus.BAD_REQUEST.value(), "서명 토큰이 잘못되었습니다."),
     INVALID_TOKEN_PARSING(HttpStatus.BAD_REQUEST.value(), "토큰 파싱이 잘못되었습니다"),
+    PAPER_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "해당 논문을 찾을 수 없습니다."),
     ;
 
     private final int status;
