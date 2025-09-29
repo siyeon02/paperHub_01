@@ -2,10 +2,14 @@ package capstone.paperhub_01.domain.highlight;
 
 import capstone.paperhub_01.domain.anchor.Anchor;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
 @Entity
+@Getter
+@Setter
 @Table(name = "highlights",
         indexes = {
         @Index(name="idx_hl_anchor", columnList="anchor_id"),
