@@ -150,4 +150,17 @@ public class PaperService {
     }
 
 
+    public Paper setFingerprint(Long paperId, String fingerprint) {
+        var paper = paperRepository.findById(paperId)
+                .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+
+        // 동일 fingerprint가 다른 문서에 이미 있으면 에러
+        paperRepository.findByFingerprint(fingerprint)
+                .filter(p -> !p.getId().equals(paperId))
+                .ifPresent(p -> { throw new IllegalStateException("Fingerprint already used by paperId=" + p.getId()); });
+
+
+        paper.setFingerprint(fingerprint);
+        return paper;
+    }
 }
