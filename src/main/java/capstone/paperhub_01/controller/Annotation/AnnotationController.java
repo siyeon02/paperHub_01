@@ -1,6 +1,9 @@
 package capstone.paperhub_01.controller.Annotation;
 
 import capstone.paperhub_01.controller.Annotation.request.HighlightCreateReq;
+import capstone.paperhub_01.controller.Annotation.response.HighlightCreateResp;
+import capstone.paperhub_01.domain.member.Member;
+import capstone.paperhub_01.security.entity.UserDetailsImpl;
 import capstone.paperhub_01.service.AnchorService;
 import capstone.paperhub_01.service.HighlightService;
 import capstone.paperhub_01.util.ApiResult;
@@ -8,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,10 +27,10 @@ public class AnnotationController {
     private final AnchorService anchorService;
 
     @PostMapping("/highlights")
-    public ResponseEntity<ApiResult<Map<String,Object>>> createHighlight(@Valid @RequestBody HighlightCreateReq req) {
-        var hl = highlightService.create(req, "user-123"); // TODO: SecurityContext에서 user
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(Map.of(
-                "highlightId", hl.getId(), "anchorId", hl.getAnchor().getId()
-        )));
+    public ResponseEntity<ApiResult<HighlightCreateResp>> createHighlight(@AuthenticationPrincipal UserDetailsImpl userDetails,  @Valid @RequestBody HighlightCreateReq req) {
+        Member member = userDetails.getUser();
+        var hl = highlightService.create(req, String.valueOf(member.getId())); // TODO: SecurityContext에서 user
+        var dto = HighlightCreateResp.from(hl);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(dto));
     }
 }

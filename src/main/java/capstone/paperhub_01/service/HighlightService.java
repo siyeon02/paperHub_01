@@ -19,8 +19,12 @@ public class HighlightService {
     public Highlight create(HighlightCreateReq req, String createdBy) {
         // 1) Anchor upsert
         var anchor = anchorService.upsert(
-                req.getPaperSha256(), req.getPage(),
-                req.getRects(), req.getExact(), req.getPrefix(), req.getSuffix(),
+                req.getPaperSha256(),
+                req.getPage(),
+                req.getRects(),
+                req.getExact(),
+                req.getPrefix(),
+                req.getSuffix(),
                 req.getSignature(), createdBy
         );
 
