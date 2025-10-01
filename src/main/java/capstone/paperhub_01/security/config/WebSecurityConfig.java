@@ -33,12 +33,13 @@ public class WebSecurityConfig {
 
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
         jwtAuthenticationFilter.setAuthenticationManager(authenticationManager(http.getSharedObject(AuthenticationConfiguration.class)));
+        //jwtAuthenticationFilter.setFilterProcessesUrl("api/auth/login");
         return http
                 .cors(withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "api/papers/**").permitAll()
+                        .requestMatchers("/api/auth/signup", "/api/auth/login", "api/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 // ✅ JWT 인가 필터 추가
