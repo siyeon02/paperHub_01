@@ -1,4 +1,4 @@
-package capstone.paperhub_01.domain.highlight;
+package capstone.paperhub_01.domain.memo.repository;
 
 import capstone.paperhub_01.domain.anchor.Anchor;
 import jakarta.persistence.*;
@@ -12,33 +12,37 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "highlights",
+@Table(name = "notes",
         indexes = {
-                @Index(name = "idx_hl_anchor", columnList = "anchor_id"),
-                @Index(name = "idx_hl_sha256_page", columnList = "paperSha256,page")
+                @Index(name = "idx_note_anchor", columnList = "anchor_id"),
+                @Index(name = "idx_note_sha256_page", columnList = "paper_Sha256,page")
         })
-public class Highlight {
+public class Memo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "anchor_id")
     private Anchor anchor;
 
+    // 문서/페이지 맥락 조회를 위해 보조 컬럼 유지
     @Column(nullable = false, length = 64)
-    private String paperSha256; // 중복 검색용
+    private String paperSha256;
     @Column(nullable = false)
     private Integer page;
 
-    @Column(length = 16)
-    private String color; // "#FFE066"
-    @Column(length = 16)
-    private String status; // "active|resolved|todo"
+    @Column(columnDefinition = "text", nullable = false)
+    private String body;
     @Column(length = 64, nullable = false)
     private String createdBy;
     @Column(nullable = false)
     private OffsetDateTime createdAt;
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
+
+    // 스레드
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Memo parent;
 }
