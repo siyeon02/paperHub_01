@@ -33,8 +33,6 @@ public class Highlight {
 
     @Column(length = 16)
     private String color; // "#FFE066"
-    @Column(length = 16)
-    private String status; // "active|resolved|todo"
     @Column(length = 64, nullable = false)
     private String createdBy;
     @Column(nullable = false)

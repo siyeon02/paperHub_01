@@ -12,7 +12,6 @@ public class HighlightCreateResp {
     private String paperSha256;
     private Integer page;
     private String color;
-    private String status;
     private OffsetDateTime createdAt;
 
     public static HighlightCreateResp from(Highlight h) {
@@ -22,7 +21,6 @@ public class HighlightCreateResp {
         r.paperSha256 = h.getPaperSha256();
         r.page        = h.getPage();
         r.color       = h.getColor();
-        r.status      = h.getStatus();
         r.createdAt   = h.getCreatedAt();
         return r;
     }

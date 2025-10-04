@@ -1,6 +1,8 @@
 package capstone.paperhub_01.service;
 
 import capstone.paperhub_01.controller.Annotation.request.HighlightCreateReq;
+import capstone.paperhub_01.controller.Annotation.response.HighlightDeleteResp;
+import capstone.paperhub_01.domain.anchor.repository.AnchorRepository;
 import capstone.paperhub_01.domain.highlight.Highlight;
 import capstone.paperhub_01.domain.highlight.repository.HighlightRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import java.time.OffsetDateTime;
 public class HighlightService {
     private final AnchorService anchorService;
     private final HighlightRepository highlightRepository;
+    private final AnchorRepository anchorRepository;
 
     @Transactional
     public Highlight create(HighlightCreateReq req, String createdBy) {
@@ -34,10 +37,28 @@ public class HighlightService {
         h.setPaperSha256(req.getPaperSha256());
         h.setPage(req.getPage());
         h.setColor(req.getColor());
-        h.setStatus("active");
         h.setCreatedBy(createdBy);
         var now = OffsetDateTime.now();
         h.setCreatedAt(now); h.setUpdatedAt(now);
         return highlightRepository.save(h);
+    }
+
+    @Transactional
+    public HighlightDeleteResp delete(Long highlightId, Long memberId) {
+
+        var h = highlightRepository.findById(highlightId)
+                .orElseThrow(() -> new IllegalArgumentException("highlight not found: " + highlightId));
+
+        Long anchorId = h.getAnchor().getId();
+
+        highlightRepository.delete(h);
+
+        boolean noHighlights = highlightRepository.countByAnchor_Id(anchorId) > 0;
+        if (noHighlights) {
+            anchorRepository.deleteById(anchorId);
+        }
+
+        return new HighlightDeleteResp(highlightId, anchorId);
+
     }
 }
