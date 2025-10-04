@@ -1,12 +1,15 @@
 package capstone.paperhub_01.service;
 
 import capstone.paperhub_01.controller.Annotation.request.MemoCreateReq;
+import capstone.paperhub_01.controller.Annotation.request.MemoEditReq;
 import capstone.paperhub_01.controller.Annotation.response.MemoCreateResp;
+import capstone.paperhub_01.controller.Annotation.response.MemoEditResp;
 import capstone.paperhub_01.domain.anchor.repository.AnchorRepository;
 import capstone.paperhub_01.domain.memo.repository.Memo;
 import capstone.paperhub_01.domain.memo.repository.MemoRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,4 +64,29 @@ public class MemoService {
         memoRepository.deleteById(id);
     }
 
+    @Transactional
+    public MemoEditResp edit(Long id, MemoEditReq req, Long memberId) {
+        Memo memo = memoRepository.findById(id)
+                .orElseThrow(()-> new BusinessException(ErrorCode.MEMO_NOT_FOUND));
+
+        if (!String.valueOf(memberId).equals(memo.getCreatedBy())) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        String newBody = req.getBody() == null ? "" : req.getBody().trim();
+        if (newBody.isEmpty()) {
+            throw new BusinessException(ErrorCode.NO_BODY);
+        }
+        if (newBody.length() > 4000) { // 운영 안전용 길이 제한
+            newBody = newBody.substring(0, 4000);
+        }
+
+        if (newBody.equals(memo.getBody())) {
+            return new MemoEditResp(memo);
+        }
+
+        memo.setUpdatedAt(OffsetDateTime.now());
+
+        return new MemoEditResp(memo);
+    }
 }

@@ -2,9 +2,11 @@ package capstone.paperhub_01.controller.Annotation;
 
 import capstone.paperhub_01.controller.Annotation.request.HighlightCreateReq;
 import capstone.paperhub_01.controller.Annotation.request.MemoCreateReq;
+import capstone.paperhub_01.controller.Annotation.request.MemoEditReq;
 import capstone.paperhub_01.controller.Annotation.response.HighlightCreateResp;
 import capstone.paperhub_01.controller.Annotation.response.HighlightDeleteResp;
 import capstone.paperhub_01.controller.Annotation.response.MemoCreateResp;
+import capstone.paperhub_01.controller.Annotation.response.MemoEditResp;
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.security.entity.UserDetailsImpl;
 import capstone.paperhub_01.service.AnchorService;
@@ -49,6 +51,13 @@ public class AnnotationController {
         var m = memoService.create(req, member.getId());
         var dto = MemoCreateResp.from(m);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(dto));
+    }
+
+    @PatchMapping("/memos/{id}")
+    public ResponseEntity<ApiResult<MemoEditResp>> editMemo(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable Long id, @Valid @RequestBody MemoEditReq req){
+        Member member = userDetails.getUser();
+        var resp = memoService.edit(id, req, member.getId());
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 
 }
