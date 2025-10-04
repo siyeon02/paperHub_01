@@ -3,6 +3,7 @@ package capstone.paperhub_01.service;
 import capstone.paperhub_01.controller.Annotation.request.MemoCreateReq;
 import capstone.paperhub_01.controller.Annotation.request.MemoEditReq;
 import capstone.paperhub_01.controller.Annotation.response.MemoCreateResp;
+import capstone.paperhub_01.controller.Annotation.response.MemoDeleteResp;
 import capstone.paperhub_01.controller.Annotation.response.MemoEditResp;
 import capstone.paperhub_01.domain.anchor.repository.AnchorRepository;
 import capstone.paperhub_01.domain.memo.repository.Memo;
@@ -59,9 +60,9 @@ public class MemoService {
     }
 
     @Transactional
-    public void delete(Long id, String requester) {
-        // TODO: 권한 체크
+    public MemoDeleteResp delete(Long id, String requester) {
         memoRepository.deleteById(id);
+        return new MemoDeleteResp(id);
     }
 
     @Transactional
