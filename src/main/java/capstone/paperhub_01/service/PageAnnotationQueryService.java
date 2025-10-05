@@ -24,15 +24,21 @@ public class PageAnnotationQueryService {
 
     @Transactional(readOnly = true)
     public PageAnnotationsResp getPageBundle(String sha256, int page) {
+        // 1) 앵커 조회
         var anchors = anchorRepository.findByPaperSha256AndPage(sha256, page);
+
         var resp = new PageAnnotationsResp();
         resp.setItems(new ArrayList<>());
 
         if (anchors.isEmpty()) {
             resp.setCount(0);
+            resp.setTotalHighlights(0);
+            resp.setTotalNotes(0);
+            resp.setTotalAnnotations(0);
             return resp;
         }
 
+        // 2) 배치 조회 (하이라이트/메모)
         var anchorIds = anchors.stream().map(Anchor::getId).toList();
 
         var highsByAnchor = highlightRepository.findByAnchorIdIn(anchorIds).stream()
@@ -41,10 +47,11 @@ public class PageAnnotationQueryService {
         var memosByAnchor = memoRepository.findByAnchorIdIn(anchorIds).stream()
                 .collect(Collectors.groupingBy(m -> m.getAnchor().getId()));
 
+        // 3) 앵커별 묶음 구성
         for (var a : anchors) {
-            // ---- Anchor ----
             var item = new PageAnnotationsResp.Item();
 
+            // ---- Anchor DTO ----
             var adto = new PageAnnotationsResp.Anchor();
             adto.setId(a.getId());
             adto.setSignature(a.getSignature());
@@ -66,9 +73,9 @@ public class PageAnnotationQueryService {
             adto.setRects(rectDtos);
             item.setAnchor(adto);
 
-            // ---- Highlights ----
+            // ---- Highlights DTO ----
             var hDtos = new ArrayList<PageAnnotationsResp.Highlight>();
-            for (Highlight h : highsByAnchor.getOrDefault(a.getId(), List.of())) {
+            for (var h : highsByAnchor.getOrDefault(a.getId(), List.of())) {
                 var hd = new PageAnnotationsResp.Highlight();
                 hd.setId(h.getId());
                 hd.setColor(h.getColor());
@@ -77,9 +84,9 @@ public class PageAnnotationQueryService {
             }
             item.setHighlights(hDtos);
 
-            // ---- Notes ----
+            // ---- Notes DTO ----
             var mDtos = new ArrayList<PageAnnotationsResp.Memo>();
-            for (Memo m : memosByAnchor.getOrDefault(a.getId(), List.of())) {
+            for (var m : memosByAnchor.getOrDefault(a.getId(), List.of())) {
                 var md = new PageAnnotationsResp.Memo();
                 md.setId(m.getId());
                 md.setBody(m.getBody());
@@ -93,7 +100,14 @@ public class PageAnnotationQueryService {
             resp.getItems().add(item);
         }
 
-        resp.setCount(resp.getItems().size());
+        // 4) 합계/카운트 계산 (여기가 핵심)
+        resp.setCount(resp.getItems().size()); // ✅ 앵커 묶음 수
+        int th = resp.getItems().stream().mapToInt(i -> i.getHighlights() == null ? 0 : i.getHighlights().size()).sum();
+        int tn = resp.getItems().stream().mapToInt(i -> i.getNotes() == null ? 0 : i.getNotes().size()).sum();
+        resp.setTotalHighlights(th);
+        resp.setTotalNotes(tn);
+        resp.setTotalAnnotations(th + tn);
+
         return resp;
     }
 

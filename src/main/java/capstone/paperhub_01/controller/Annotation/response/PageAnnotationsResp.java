@@ -11,6 +11,9 @@ import java.util.List;
 public class PageAnnotationsResp {
     private int count;
     private List<Item> items;
+    private int totalHighlights;
+    private int totalNotes;
+    private int totalAnnotations;
 
     @Data
     public static class Item {
@@ -36,7 +39,6 @@ public class PageAnnotationsResp {
     public static class Highlight {
         private Long id;
         private String color;
-        private String status;
         private String createdBy;
     }
 
