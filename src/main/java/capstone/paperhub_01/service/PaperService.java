@@ -107,9 +107,6 @@ public class PaperService {
             Paper paper = Paper.builder()
                     .sha256(sha256)
                     .fingerprint(null) // 필요 시 프론트에서 보고한 fingerprint를 PATCH로 저장
-                    .sourceId(sourceId)
-                    .title((String) infoJson.getOrDefault("Title", null))
-                    .author((String) infoJson.getOrDefault("Author", null))
                     .infoJson(infoJson.isEmpty() ? null : infoJson)
                     .xmpJson(xmpJson)
                     .numPages(numPages)
