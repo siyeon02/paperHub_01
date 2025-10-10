@@ -1,4 +1,4 @@
-package capstone.paperhub_01.domain.memo.repository;
+package capstone.paperhub_01.domain.memo;
 
 import capstone.paperhub_01.domain.anchor.Anchor;
 import jakarta.persistence.*;

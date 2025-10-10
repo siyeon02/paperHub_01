@@ -17,6 +17,7 @@ public enum ErrorCode {
     ANCHOR_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "해당 앵커를 찾을 수 없습니다."),
     MEMO_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "해당 메모를 찾을 수 없습니다."),
     NO_BODY(HttpStatus.NO_CONTENT.value(), "내용이 없습니다."),
+    INVALID_STATUS(HttpStatus.BAD_REQUEST.value(), "잘못된 상태입니다."),
     ;
 
     private final int status;
