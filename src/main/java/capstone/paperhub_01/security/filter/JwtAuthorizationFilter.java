@@ -37,9 +37,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private final AntPathMatcher matcher = new AntPathMatcher();
 
     private static final List<String> PUBLIC_PATTERNS = List.of(
-            "/api/auth/**", // signup, login
-            "/api/papers/**"
-
+            "/api/auth/**" // signup, login
     );
 
     // ✅ 공개 경로 & 프리플라이트는 아예 필터 적용 안 함
