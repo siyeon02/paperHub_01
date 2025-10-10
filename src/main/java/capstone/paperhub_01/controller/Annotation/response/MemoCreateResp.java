@@ -1,6 +1,6 @@
 package capstone.paperhub_01.controller.Annotation.response;
 
-import capstone.paperhub_01.domain.memo.repository.Memo;
+import capstone.paperhub_01.domain.memo.Memo;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
