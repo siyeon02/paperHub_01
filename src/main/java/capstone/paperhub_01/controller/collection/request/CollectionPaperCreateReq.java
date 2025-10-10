@@ -1,6 +1,5 @@
-package capstone.paperhub_01.controller.Collection.request;
+package capstone.paperhub_01.controller.collection.request;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

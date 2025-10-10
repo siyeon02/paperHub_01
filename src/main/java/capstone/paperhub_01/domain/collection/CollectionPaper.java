@@ -18,7 +18,7 @@ import java.util.Map;
 @NoArgsConstructor
 @Table(name = "collection_papers",
         indexes = {
-                @Index(name="idx_cp_collection_status", columnList="collection_id,status"),
+                @Index(name="idx_cp_member_status", columnList="member_id,status"),
                 @Index(name="idx_cp_paper", columnList="paper_id")
         })
 public class CollectionPaper {
@@ -38,7 +38,7 @@ public class CollectionPaper {
     @Column(nullable = false, length = 12)
     private ReadingStatus status; // TO_READ, IN_PROGRESS, DONE
 
-    @JdbcTypeCode(SqlTypes.JSON) // hibernate-types 사용 시 jsonb 매핑
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> tags;
 
