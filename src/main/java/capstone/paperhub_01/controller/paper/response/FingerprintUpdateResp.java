@@ -12,8 +12,6 @@ public class FingerprintUpdateResp {
     private Long paperId;
     private String sha256;
     private String fingerprint;
-    private String title;
-    private String author;
     private Integer numPages;
     private List<Map<String, Object>> pageSizes;
 
@@ -22,8 +20,6 @@ public class FingerprintUpdateResp {
         resp.paperId = paper.getId();
         resp.sha256 = paper.getSha256();
         resp.fingerprint = paper.getFingerprint();
-        resp.title = paper.getTitle();
-        resp.author = paper.getAuthor();
         resp.numPages = paper.getNumPages();
         resp.pageSizes = paper.getPageSizes();
         return resp;
