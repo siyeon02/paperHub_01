@@ -31,11 +31,6 @@ public class Paper {
     @Column(length = 64)
     private String fingerprint;
 
-    private String sourceId;
-
-    private String title;
-    private String author;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> infoJson;
