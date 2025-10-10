@@ -1,10 +1,7 @@
 package capstone.paperhub_01.controller.collection;
 
 import capstone.paperhub_01.controller.collection.request.CollectionPaperCreateReq;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperCreateResp;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperInfo;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperListResp;
-import capstone.paperhub_01.controller.collection.response.StatusChangeResp;
+import capstone.paperhub_01.controller.collection.response.*;
 import capstone.paperhub_01.domain.collection.ReadingStatus;
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.ex.BusinessException;
@@ -14,6 +11,7 @@ import capstone.paperhub_01.service.CollectionService;
 import capstone.paperhub_01.util.ApiResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.User;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -67,6 +65,17 @@ public class CollectionController {
     {
         Member member = userDetails.getUser();
         var resp = collectionService.retrieveCollectionPaperInfo(member.getId(), id);
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
+    }
+
+    @DeleteMapping("/collection-items/{id}")
+    public ResponseEntity<ApiResult<DeleteCollectionPaperResp>> deleteCollectionPaper(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable("id") Long id
+            )
+    {
+        Member member = userDetails.getUser();
+        var resp = collectionService.deleteCollectionPaper(member.getId(), id);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 

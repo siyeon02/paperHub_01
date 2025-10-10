@@ -1,10 +1,7 @@
 package capstone.paperhub_01.service;
 
 import capstone.paperhub_01.controller.collection.request.CollectionPaperCreateReq;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperCreateResp;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperInfo;
-import capstone.paperhub_01.controller.collection.response.CollectionPaperListResp;
-import capstone.paperhub_01.controller.collection.response.StatusChangeResp;
+import capstone.paperhub_01.controller.collection.response.*;
 import capstone.paperhub_01.domain.collection.CollectionPaper;
 import capstone.paperhub_01.domain.collection.ReadingStatus;
 import capstone.paperhub_01.domain.collection.repository.CollectionPaperRepository;
@@ -84,7 +81,7 @@ public class CollectionService {
 
         ReadingStatus target = parseStatus(status);
 
-        CollectionPaper cp = collectionPaperRepository.findById(id)
+        CollectionPaper cp = collectionPaperRepository.findInfoByIdAndMember(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
 
 
@@ -136,7 +133,7 @@ public class CollectionService {
     }
 
     @Transactional(readOnly = true)
-    public CollectionPaperInfo retrieveCollectionPaperInfo(Long id, Long memberId) {
+    public CollectionPaperInfo retrieveCollectionPaperInfo(Long memberId, Long id) {
 
         CollectionPaper cp = collectionPaperRepository.findInfoByIdAndMember(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
@@ -150,5 +147,21 @@ public class CollectionService {
         r.setUpdatedAt(cp.getUpdatedAt());
 
         return r;
+    }
+
+    @Transactional
+    public DeleteCollectionPaperResp deleteCollectionPaper(Long memberId, Long id) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        CollectionPaper cp = collectionPaperRepository.findInfoByIdAndMember(id, memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+
+        DeleteCollectionPaperResp resp = new DeleteCollectionPaperResp();
+        resp.setId(cp.getId());
+
+        collectionPaperRepository.delete(cp);
+
+        return resp;
     }
 }
