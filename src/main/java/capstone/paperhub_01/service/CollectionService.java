@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.OffsetDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 
 @Service
@@ -81,7 +83,7 @@ public class CollectionService {
 
         ReadingStatus target = parseStatus(status);
 
-        CollectionPaper cp = collectionPaperRepository.findInfoByIdAndMember(id, memberId)
+        CollectionPaper cp = collectionPaperRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
 
 
@@ -133,7 +135,7 @@ public class CollectionService {
     }
 
     @Transactional(readOnly = true)
-    public CollectionPaperInfo retrieveCollectionPaperInfo(Long memberId, Long id) {
+    public CollectionPaperInfo retrieveCollectionPaperInfo(Long id, Long memberId) {
 
         CollectionPaper cp = collectionPaperRepository.findInfoByIdAndMember(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
@@ -163,5 +165,20 @@ public class CollectionService {
         collectionPaperRepository.delete(cp);
 
         return resp;
+    }
+
+    @Transactional(readOnly = true)
+    public CollectionStatusCountResp countCollections(Long memberId) {
+        List<CollectionPaperRepository.StatusCountProjection> counts =
+                collectionPaperRepository.countByMemberGrouped(memberId);
+
+        // 기본값(0) 포함시켜서 응답
+        Map<ReadingStatus, Long> map = new EnumMap<>(ReadingStatus.class);
+        for (ReadingStatus rs : ReadingStatus.values()) {
+            map.put(rs, 0L);
+        }
+        counts.forEach(c -> map.put(c.getStatus(), c.getCount()));
+
+        return new CollectionStatusCountResp(map);
     }
 }
