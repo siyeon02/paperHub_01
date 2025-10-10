@@ -79,6 +79,13 @@ public class CollectionController {
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 
+    @GetMapping("/collections/count")
+    public ResponseEntity<ApiResult<CollectionStatusCountResp>> countCollections(@AuthenticationPrincipal UserDetailsImpl userDetails){
+        Member member = userDetails.getUser();
+        var resp = collectionService.countCollections(member.getId());
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
+    }
+
 
 
     private ReadingStatus parseStatus(String s) {

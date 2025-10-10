@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CollectionPaperRepository extends JpaRepository<CollectionPaper, Long> {
@@ -32,4 +33,17 @@ public interface CollectionPaperRepository extends JpaRepository<CollectionPaper
           and cp.member.id = :memberId
     """)
     Optional<CollectionPaper> findInfoByIdAndMember(Long id, Long memberId);
+
+    @Query("""
+        select cp.status as status, count(cp) as count
+        from CollectionPaper cp
+        where cp.member.id = :memberId
+        group by cp.status
+    """)
+    List<StatusCountProjection> countByMemberGrouped(@Param("memberId") Long memberId);
+
+    interface StatusCountProjection {
+        ReadingStatus getStatus();
+        long getCount();
+    }
 }
