@@ -1,5 +1,6 @@
 package capstone.paperhub_01.domain.member;
 
+import capstone.paperhub_01.security.entity.UserRoleEnum;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,12 +27,17 @@ public class Member {
     @Column
     private String email;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRoleEnum role;
+
     @Builder
-    public Member(String name, String nickname, String password, String email){
+    public Member(String name, String nickname, String password, String email, UserRoleEnum role){
         this.name = name;
         this.nickname = nickname;
         this.password = password;
         this.email = email;
+        this.role = role;
     }
 
 }

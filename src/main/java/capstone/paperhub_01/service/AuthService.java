@@ -6,6 +6,7 @@ import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
+import capstone.paperhub_01.security.entity.UserRoleEnum;
 import capstone.paperhub_01.security.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +33,7 @@ public class AuthService {
                 .nickname(dto.getNickname())
                 .password(encodePassword)
                 .email(dto.getEmail())
+                .role(UserRoleEnum.USER)
                 .build();
 
         Member savedMember = memberRepository.save(member);
