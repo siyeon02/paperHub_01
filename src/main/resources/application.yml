@@ -1,0 +1,30 @@
+# src/main/resources/application.yml
+storage:
+  base-dir: "${user.home}/paperhub/pdfs"
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  application:
+    name: PaperHub_01
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/paperhub
+    username: paperhub_user
+    password: paperhub1234
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+
+jwt:
+  secret:
+    # 운영에선 환경변수로 주입 권장 (아래 참고)
+    key: "${JWT_SECRET:7Iqk7YyM66W07YOA7L2U65Sp7YG065+9U3ByaW5n6rCV7J2Y7Yqc7YSw7LWc7JuQ67mI7J6F64uI64ukLg==}"
