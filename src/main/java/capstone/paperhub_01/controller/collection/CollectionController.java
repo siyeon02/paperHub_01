@@ -64,7 +64,7 @@ public class CollectionController {
             @PathVariable("id") Long id)
     {
         Member member = userDetails.getUser();
-        var resp = collectionService.retrieveCollectionPaperInfo(member.getId(), id);
+        var resp = collectionService.retrieveCollectionPaperInfo(id, member.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 

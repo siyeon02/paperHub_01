@@ -8,6 +8,7 @@ import capstone.paperhub_01.domain.collection.repository.CollectionPaperReposito
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.Paper;
+import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
@@ -31,6 +32,7 @@ public class CollectionService {
     private final PaperRepository paperRepository;
     private final CollectionPaperRepository collectionPaperRepository;
     private final MemberRepository memberRepository;
+    private final PaperInfoRepository paperInfoRepository;
 
     @Transactional
     public CollectionPaperCreateResp createCollectionPapers(String status, CollectionPaperCreateReq req, Long memberId) {
@@ -131,6 +133,17 @@ public class CollectionService {
         r.setLastOpenedAt(cp.getLastOpenedAt());
         r.setAddedAt(cp.getAddedAt());
         r.setUpdatedAt(cp.getUpdatedAt());
+
+        // PaperInfo
+        var info = cp.getPaper().getPaperInfo();
+        if (info != null) {
+            r.setTitle(info.getTitle());
+            r.setAuthors(info.getAuthors());
+            r.setPrimaryCategory(info.getPrimaryCategory());
+            r.setCategories(info.getCategories());
+            r.setArxivId(info.getArxivId());
+            r.setPdfUrl(info.getPdfUrl());
+        }
         return r;
     }
 
@@ -141,12 +154,28 @@ public class CollectionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
 
         CollectionPaperInfo r = new CollectionPaperInfo();
+
         r.setId(cp.getId());
         r.setPaperId(cp.getPaper().getId());
         r.setStatus(cp.getStatus());
         r.setLastOpenedAt(cp.getLastOpenedAt());
         r.setAddedAt(cp.getAddedAt());
         r.setUpdatedAt(cp.getUpdatedAt());
+
+        //paperInfo 정보 추가
+
+        var info = cp.getPaper().getPaperInfo();
+        if (info != null) {
+
+            r.setTitle(info.getTitle());
+            r.setArxivId(info.getArxivId());
+            r.setAbstractText(info.getAbstractText());
+            r.setPrimaryCategory(info.getPrimaryCategory());
+            r.setPdfUrl(info.getPdfUrl());
+            r.setAuthorsJson(info.getAuthors());
+            r.setCategoriesJson(info.getCategories());
+            r.setPublishedDate(info.getPublishedDate());
+        }
 
         return r;
     }

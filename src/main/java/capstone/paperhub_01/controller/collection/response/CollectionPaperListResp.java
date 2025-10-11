@@ -15,6 +15,14 @@ public class CollectionPaperListResp {
     private OffsetDateTime addedAt;
     private OffsetDateTime updatedAt;
 
+    //paperInfo
+    private String title;
+    private String authors;
+    private String primaryCategory;
+    private String categories;
+    private String arxivId;
+    private String pdfUrl;
+
     @Data
     public static class PageResp<T>{
         private List<T> content;

@@ -1,0 +1,11 @@
+package capstone.paperhub_01.domain.paper.repository;
+
+import capstone.paperhub_01.domain.paper.PaperInfo;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface PaperInfoRepository extends JpaRepository<PaperInfo, Long> {
+    Optional<PaperInfo> findByArxivId(String arxivId);
+
+}

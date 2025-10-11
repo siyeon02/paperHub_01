@@ -54,4 +54,12 @@ public class Paper {
 
     @Column(nullable = false)
     private OffsetDateTime createdAt;
+
+    @OneToOne(mappedBy = "paper", fetch = FetchType.LAZY, cascade = CascadeType.ALL, optional = true)
+    private PaperInfo paperInfo;
+
+    public void attachInfo(PaperInfo info) {
+        this.paperInfo = info;
+        info.setPaper(this);
+    }
 }
