@@ -10,21 +10,20 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategorySummaryResp {
+public class SubCategorySummaryResp {
     private String code;
     private String name;
-    private long paperCount;
-    private long childrenCount;
 
-    public record CategoryPageResponse<T>(
+
+    public record PageResponse<T>(
             List<T> content,
             int page,
             int size,
             long totalElements,
             int totalPages
     ) {
-        public static <T> CategoryPageResponse<T> from(Page<T> p) {
-            return new CategoryPageResponse<>(
+        public static <T> SubCategorySummaryResp.PageResponse<T> from(Page<T> p) {
+            return new SubCategorySummaryResp.PageResponse<>(
                     p.getContent(), p.getNumber(), p.getSize(),
                     p.getTotalElements(), p.getTotalPages()
             );

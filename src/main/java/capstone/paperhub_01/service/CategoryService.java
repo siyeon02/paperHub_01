@@ -2,6 +2,7 @@ package capstone.paperhub_01.service;
 
 
 import capstone.paperhub_01.controller.category.response.CategorySummaryResp;
+import capstone.paperhub_01.controller.category.response.SubCategorySummaryResp;
 import capstone.paperhub_01.domain.category.Category;
 import capstone.paperhub_01.domain.category.PaperCategory;
 import capstone.paperhub_01.domain.category.PaperCategoryId;
@@ -110,5 +111,18 @@ public class CategoryService {
         return withCounts
                 ? categoryRepository.findRootSummariesWithCounts(pageable)
                 : categoryRepository.findRootSummaries(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SubCategorySummaryResp> getChildrenSummaries(String code, Pageable pageable) {
+        // 부모가 없으면 404
+        if (!categoryRepository.existsById(code)) {
+            throw new IllegalArgumentException("Category not found: " + code);
+        }
+
+        return categoryRepository.findChildrenWithDirectCounts(code, pageable);
+
+
+
     }
 }

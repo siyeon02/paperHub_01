@@ -1,6 +1,7 @@
 package capstone.paperhub_01.controller.category;
 
 import capstone.paperhub_01.controller.category.response.CategorySummaryResp;
+import capstone.paperhub_01.controller.category.response.SubCategorySummaryResp;
 import capstone.paperhub_01.domain.category.Category;
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.security.entity.UserDetailsImpl;
@@ -15,10 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -41,4 +39,14 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(page));
 
     }
+
+    @GetMapping("/categories/{code}/children")
+    public ResponseEntity<ApiResult<Page<SubCategorySummaryResp>>> getChildren(
+            @PathVariable String code,
+            @PageableDefault(size = 100) Pageable pageable
+    ) {
+        Page<SubCategorySummaryResp> page = categoryService.getChildrenSummaries(code, pageable);
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(page));
+    }
+
 }
