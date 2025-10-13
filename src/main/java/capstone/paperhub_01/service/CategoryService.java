@@ -2,6 +2,7 @@ package capstone.paperhub_01.service;
 
 
 import capstone.paperhub_01.controller.category.response.CategorySummaryResp;
+import capstone.paperhub_01.controller.category.response.PaperSummaryResp;
 import capstone.paperhub_01.controller.category.response.SubCategorySummaryResp;
 import capstone.paperhub_01.domain.category.Category;
 import capstone.paperhub_01.domain.category.PaperCategory;
@@ -124,5 +125,14 @@ public class CategoryService {
 
 
 
+    }
+
+    public Page<PaperSummaryResp> getCategoryPapers(String code, boolean rollup, Pageable pageable) {
+        if (!categoryRepository.existsById(code)) {
+            throw new IllegalArgumentException("Category not found: " + code);
+        }
+        return rollup
+                ? categoryRepository.findRollupPapersByCategory(code, pageable)
+                : categoryRepository.findDirectPapersByCategory(code, pageable);
     }
 }

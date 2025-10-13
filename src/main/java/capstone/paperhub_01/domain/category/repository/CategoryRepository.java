@@ -1,6 +1,7 @@
 package capstone.paperhub_01.domain.category.repository;
 
 import capstone.paperhub_01.controller.category.response.CategorySummaryResp;
+import capstone.paperhub_01.controller.category.response.PaperSummaryResp;
 import capstone.paperhub_01.controller.category.response.SubCategorySummaryResp;
 import capstone.paperhub_01.domain.category.Category;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
@@ -58,6 +59,30 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     Page<SubCategorySummaryResp> findChildrenWithDirectCounts(@Param("code") String code, Pageable pageable);
 
 
+    /** 직계만: pc.category.code = :code */
+    @Query("""
+        select distinct new capstone.paperhub_01.controller.category.response.PaperSummaryResp(
+            p.id, coalesce(pi.title, ''), pi.arxivId, pi.abstractText, pi.authors, pi.publishedDate, pi.primaryCategory
+        )
+        from PaperCategory pc
+        join pc.paper p
+        left join PaperInfo pi on pi.paper = p
+        where pc.category.code = :code
+            or pc.category.code like concat(:code, '.%')
+    """)
+    Page<PaperSummaryResp> findDirectPapersByCategory(@Param("code") String code, Pageable pageable);
+
+    /** 롤업(자기 + 하위): code = :code or code like :code.% */
+    @Query("""
+                select distinct new capstone.paperhub_01.controller.category.response.PaperSummaryResp(
+                    p.id, coalesce(pi.title, ''), pi.arxivId, pi.abstractText, pi.authors, pi.publishedDate, pi.primaryCategory
+                )
+                from PaperCategory pc
+                join pc.paper p
+                left join PaperInfo pi on pi.paper = p
+                where pc.category.code = :code
+            """)
+    Page<PaperSummaryResp> findRollupPapersByCategory(@Param("code") String code, Pageable pageable);
 
 
 }
