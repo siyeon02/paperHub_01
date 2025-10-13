@@ -1,13 +1,16 @@
 package capstone.paperhub_01.domain.paper;
 
+import capstone.paperhub_01.domain.category.Category;
+import capstone.paperhub_01.domain.category.PaperCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static jakarta.persistence.FetchType.LAZY;
 
 @Entity
 @Table(name = "papers", indexes = {
@@ -55,8 +58,23 @@ public class Paper {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
-    @OneToOne(mappedBy = "paper", fetch = FetchType.LAZY, cascade = CascadeType.ALL, optional = true)
+    @OneToOne(mappedBy = "paper", fetch = LAZY, cascade = CascadeType.ALL, optional = true)
     private PaperInfo paperInfo;
+
+    @ManyToOne(fetch = LAZY)
+    @JoinColumn(name = "primary_category_code",
+            foreignKey = @ForeignKey(name="fk_papers_primary_category"))
+    private Category primaryCategory;
+
+    @OneToMany(mappedBy = "paper", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PaperCategory> secondaryCategories = new HashSet<>();
+
+    public void setPrimaryCategory(Category cat) { this.primaryCategory = cat; }
+
+    public void replaceSecondaryCategories(Collection<Category> cats) {
+        secondaryCategories.clear();
+        if (cats != null) for (Category c : cats) secondaryCategories.add(PaperCategory.link(this, c));
+    }
 
     public void attachInfo(PaperInfo info) {
         this.paperInfo = info;
