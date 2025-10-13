@@ -17,7 +17,7 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     /** withCounts=false: 집계 없이 코드/이름만 페이징 */
     @Query("""
         select new capstone.paperhub_01.controller.category.response.CategorySummaryResp(
-            c.code, c.name, 0L
+            c.code, c.name, 0L, 0L
         )
         from Category c
         where c.parent is null
@@ -26,15 +26,20 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     Page<CategorySummaryResp> findRootSummaries(Pageable pageable);
 
     /** withCounts=true: 논문 수/자식 수 집계 포함 */
-    @Query("""
-        select new capstone.paperhub_01.controller.category.response.CategorySummaryResp(
-            c.code,
-            c.name,
-            (select count(ch) from Category ch where ch.parent = c)
-        )
-        from Category c
-        where c.parent is null
-        order by c.code
-    """)
+    @Query(value = """
+              SELECT
+                c.code                  AS code,
+                c.name                  AS name,
+                COALESCE(crc.paper_count, 0) AS paperCount,
+                (SELECT COUNT(*) FROM category ch WHERE ch.parent_code = c.code) AS childrenCount
+              FROM category c
+              LEFT JOIN category_rollup_counts crc ON crc.category_code = c.code
+              WHERE c.parent_code IS NULL
+              ORDER BY c.code
+            """,
+            countQuery = """
+  SELECT COUNT(*) FROM category c WHERE c.parent_code IS NULL
+""",
+            nativeQuery = true)
     Page<CategorySummaryResp> findRootSummariesWithCounts(Pageable pageable);
 }
