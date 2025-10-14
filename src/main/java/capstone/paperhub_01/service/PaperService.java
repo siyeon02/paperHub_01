@@ -5,7 +5,9 @@ import capstone.paperhub_01.controller.paper.response.PaperViewResp;
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.Paper;
+import capstone.paperhub_01.domain.paper.PaperInfo;
 import capstone.paperhub_01.domain.paper.config.FileStorageProperties;
+import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
@@ -33,6 +35,8 @@ public class PaperService {
     private final PaperRepository paperRepository;
     private final MemberRepository memberRepository;
     private final FileStorageProperties storageProperties;
+    private final PaperInfoRepository paperInfoRepository;
+    private final CategoryService categoryService;
 
     @Transactional
     public PaperCreateResp uploadAndExtractFromPath(Path path, Long memberId) {
@@ -46,6 +50,8 @@ public class PaperService {
             // 1) DB 중복 체크: 있으면 파일은 건드리지 않고 바로 리턴
             var existing = paperRepository.findBySha256(sha256);
             if (existing.isPresent()) {
+                Paper paper = existing.get();
+                syncCategoriesFromPaperInfo(paper, paper.getPaperInfo().getArxivId());
                 return PaperCreateResp.from(existing.get());
             }
 
@@ -124,6 +130,11 @@ public class PaperService {
                     .build();
 
             paperRepository.save(paper);
+
+            String extractedArxivId = extractArxivIdFromPath(dest);
+
+            syncCategoriesFromPaperInfo(paper, extractedArxivId);
+
             return PaperCreateResp.from(paper);
 
         } catch (IOException e) {
@@ -131,6 +142,49 @@ public class PaperService {
         }
     }
 
+    /** PaperInfo에서 카테고리 코드를 찾아 부모부터 생성→PaperCategory 링크(멱등) */
+    private void syncCategoriesFromPaperInfo(Paper paper, String arXivId) {
+        // 1) paper_id → 2) sha256 → 3) sourceId 순으로 PaperInfo 탐색
+        Optional<PaperInfo> infoOpt = paperInfoRepository.findByPaper_Id(paper.getId());
+
+        if (infoOpt.isEmpty() && arXivId != null && !arXivId.isBlank()) {
+            infoOpt = paperInfoRepository.findByArxivId(arXivId);
+        }
+
+        // 2) FK 백필 (크롤링 선저장 모델이므로 paper_id 가 비어 있을 수 있음)
+        infoOpt.ifPresent(info -> {
+            if (info.getPaper() == null) {
+                info.setPaper(paper); // FK 채움
+            }
+            // 3) 카테고리 동기화
+            List<String> codes = extractCodesFromInfo(info); // CSV/JSONB 파싱
+            if (!codes.isEmpty()) {
+                categoryService.syncPaperCategories(paper, codes);
+            }
+        });
+    }
+
+    private String extractArxivIdFromPath(Path path) {
+        String name = path.getFileName().toString();
+        // 예: 2509.11104.pdf → 2509.11104
+        int dot = name.indexOf('.');
+        return (dot > 0) ? name.substring(0, dot) : null;
+    }
+
+    /** PaperInfo의 저장 형태에 맞춰 카테고리 코드 파싱 */
+    private List<String> extractCodesFromInfo(PaperInfo info) {
+        List<String> arr = info.getCategories();
+        if (arr == null) return List.of();
+        return arr.stream()
+                .filter(s -> s != null && !s.isBlank())
+                .map(this::normalize)
+                .distinct()
+                .toList();
+    }
+
+    private String normalize(String s) {
+        return s.trim().replaceAll("\\s+", "");
+    }
 
     private static String sha256Hex(byte[] bytes) {
         try {

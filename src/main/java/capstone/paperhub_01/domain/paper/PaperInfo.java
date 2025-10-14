@@ -11,9 +11,13 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "paper_infos")
+@Table(name = "paper_infos",
+        uniqueConstraints = {
+                @UniqueConstraint(name="uq_paper_infos_paper_id", columnNames = "paper_id")
+})
 @Getter
 @NoArgsConstructor
 @Setter
@@ -24,9 +28,9 @@ public class PaperInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "paper_id", foreignKey = @ForeignKey(name="fk_paper_infos_paper_id"))
+    /* package-private */
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "paper_id", nullable = true, foreignKey = @ForeignKey(name="fk_paper_infos_paper_id"))
     private Paper paper;
 
     private String title;
@@ -43,31 +47,16 @@ public class PaperInfo {
 
     private LocalDate publishedDate;
 
-    private OffsetDateTime updatedDate;
+    private LocalDate updatedDate;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String categories;
+    private List<String> categories;
 
     private String primaryCategory;
 
     private String pdfUrl;
 
-
-    /* package-private */ void setPaper(Paper p) { this.paper = p; }
-
-    // 업데이트 전용 도메인 메서드
-    public void upsertFrom(PaperInfoUpsert up) {
-        if (up.title() != null) this.title = up.title();
-        if (up.arxivId() != null) this.arxivId = up.arxivId();
-        if (up.abstractText() != null) this.abstractText = up.abstractText();
-        if (up.authorsJson() != null) this.authors = up.authorsJson();
-        if (up.publishedDate() != null) this.publishedDate = up.publishedDate();
-        if (up.updatedDate() != null) this.updatedDate = up.updatedDate();
-        if (up.categoriesJson() != null) this.categories = up.categoriesJson();
-        if (up.primaryCategory() != null) this.primaryCategory = up.primaryCategory();
-        if (up.pdfUrl() != null) this.pdfUrl = up.pdfUrl();
-    }
 
     // 값 객체(업서트 입력용)
     public record PaperInfoUpsert(
@@ -76,7 +65,7 @@ public class PaperInfo {
             String abstractText,
             String authorsJson,
             LocalDate publishedDate,
-            OffsetDateTime updatedDate,
+            LocalDate updatedDate,
             String categoriesJson,
             String primaryCategory,
             String pdfUrl

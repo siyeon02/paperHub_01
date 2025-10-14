@@ -140,7 +140,7 @@ public class CollectionService {
             r.setTitle(info.getTitle());
             r.setAuthors(info.getAuthors());
             r.setPrimaryCategory(info.getPrimaryCategory());
-            r.setCategories(info.getCategories());
+            r.setCategories(info.getCategories().toString());
             r.setArxivId(info.getArxivId());
             r.setPdfUrl(info.getPdfUrl());
         }
@@ -173,7 +173,7 @@ public class CollectionService {
             r.setPrimaryCategory(info.getPrimaryCategory());
             r.setPdfUrl(info.getPdfUrl());
             r.setAuthorsJson(info.getAuthors());
-            r.setCategoriesJson(info.getCategories());
+            r.setCategoriesJson(info.getCategories().toString());
             r.setPublishedDate(info.getPublishedDate());
         }
 
