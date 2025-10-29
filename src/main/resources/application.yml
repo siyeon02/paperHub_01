@@ -31,3 +31,8 @@ spring:
 jwt:
   secret:
     key: "${JWT_SECRET:7Iqk7YyM66W07YOA7L2U65Sp7YG065+9U3ByaW5n6rCV7J2Y7Yqc7YSw7LWc7JuQ67mI7J6F64uI64ukLg==}"
+
+pinecone:
+  apiKey: ${PINECONE_API_KEY:pcsk_4N174X_M87YqzLwgiiW79HgaqaS3o9jFGX5bwn7ZeM36UQwDWreqtUg8RkMwtWMiC42y2B}
+  queryUrl: https://paper-keywords-ntuygv9.svc.aped-4627-b74a.pinecone.io/query   # Pinecone 콘솔의 Query URL
+  namespace: ${PINECONE_NAMESPACE:}
