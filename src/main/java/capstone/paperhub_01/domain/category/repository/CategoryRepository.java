@@ -47,18 +47,6 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     Page<CategorySummaryResp> findRootSummariesWithCounts(Pageable pageable);
 
 
-    /* 서브 목록: 카운트 없이 */
-    @Query("""
-  select new capstone.paperhub_01.controller.category.response.SubCategorySummaryResp(
-     ch.code, ch.name
-  )
-  from Category ch
-  where ch.parent.code = :code
-  order by ch.code
-""")
-    Page<SubCategorySummaryResp> findChildrenWithDirectCounts(@Param("code") String code, Pageable pageable);
-
-
     /** 직계만: pc.category.code = :code */
     @Query("""
         select distinct new capstone.paperhub_01.controller.category.response.PaperSummaryResp(
@@ -85,4 +73,38 @@ public interface CategoryRepository extends JpaRepository<Category, String> {
     Page<PaperSummaryResp> findRollupPapersByCategory(@Param("code") String code, Pageable pageable);
 
 
+    // 루트 카테고리 요약 (롤업 X, 직접 연결만)
+    @Query("""
+        SELECT new capstone.paperhub_01.controller.category.response.CategorySummaryResp(
+            c.code,
+            c.name,
+            (SELECT COUNT(DISTINCT pc.paper.id) FROM capstone.paperhub_01.domain.category.PaperCategory pc
+             WHERE pc.category.code = c.code),
+            (SELECT COUNT(ch) FROM capstone.paperhub_01.domain.category.Category ch
+             WHERE ch.parent.code = c.code)
+        )
+        FROM capstone.paperhub_01.domain.category.Category c
+        WHERE c.parent IS NULL
+        ORDER BY c.code
+        """)
+    Page<CategorySummaryResp> findRootSummariesNoRollup(Pageable pageable);
+
+    // 자식 카테고리 요약 (롤업 X, 직접 연결만)
+    @Query("""
+        SELECT new capstone.paperhub_01.controller.category.response.SubCategorySummaryResp(
+            c.code,
+            c.name,
+            (SELECT COUNT(DISTINCT pc.paper.id) FROM capstone.paperhub_01.domain.category.PaperCategory pc
+             WHERE pc.category.code = c.code),
+            (SELECT COUNT(ch) FROM capstone.paperhub_01.domain.category.Category ch
+             WHERE ch.parent.code = c.code)
+        )
+        FROM capstone.paperhub_01.domain.category.Category c
+        WHERE c.parent.code = :parentCode
+        ORDER BY c.code
+        """)
+    Page<SubCategorySummaryResp> findChildrenNoRollup(String parentCode, Pageable pageable);
+
+    // (참고) 기존 findRootSummariesWithCounts / findRootSummaries / findChildrenWithDirectCounts
+    // 를 더 이상 쓰지 않으면 제거해도 무방.
 }

@@ -13,6 +13,8 @@ import java.util.List;
 public class SubCategorySummaryResp {
     private String code;
     private String name;
+    private long paperCount;
+    private long childrenCount;
 
 
     public record PageResponse<T>(

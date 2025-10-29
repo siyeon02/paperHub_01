@@ -8,6 +8,5 @@ import java.util.Optional;
 
 public interface PaperInfoRepository extends JpaRepository<PaperInfo, Long> {
     Optional<PaperInfo> findByArxivId(String arxivId);
-
     Optional<PaperInfo> findByPaper_Id(Long paperId);
 }

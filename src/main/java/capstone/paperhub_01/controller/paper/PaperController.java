@@ -34,6 +34,38 @@ import java.nio.file.Paths;
 public class PaperController {
     private final PaperService paperService;
 
+//    @PostMapping(value = "/register-from-url", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<ApiResult<PaperCreateResp>> upload(
+//            @NotNull @RequestPart("file") MultipartFile file,
+//            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+//
+//        Path tmpDir = Paths.get(System.getProperty("java.io.tmpdir"), "paperhub");
+//        try {
+//            Files.createDirectories(tmpDir);
+//        } catch (IOException e) {
+//            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create tmp dir", e);
+//        }
+//
+//        Path localTmp;
+//        try {
+//            localTmp = Files.createTempFile(tmpDir, "upload-", ".pdf");
+//            file.transferTo(localTmp.toFile());
+//        } catch (IOException e) {
+//            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to receive upload", e);
+//        }
+//
+//        PaperCreateResp resp;
+//        try {
+//            Long memberId = userDetails.getUser().getId();
+//            resp = paperService.uploadAndExtractFromPath(localTmp, memberId);
+//        } finally {
+//
+//            try { Files.deleteIfExists(localTmp); } catch (Exception ignore) {}
+//        }
+//
+//        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(resp));
+//    }
+
     @PostMapping(value = "/register-from-url", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResult<PaperCreateResp>> upload(
             @NotNull @RequestPart("file") MultipartFile file,
@@ -57,14 +89,18 @@ public class PaperController {
         PaperCreateResp resp;
         try {
             Long memberId = userDetails.getUser().getId();
-            resp = paperService.uploadAndExtractFromPath(localTmp, memberId);
-        } finally {
 
+            // ✅ 원본 파일명 전달 (없으면 빈 문자열)
+            String originalFilename = file.getOriginalFilename();
+            resp = paperService.uploadAndExtractFromPath(localTmp, originalFilename, memberId);
+
+        } finally {
             try { Files.deleteIfExists(localTmp); } catch (Exception ignore) {}
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(resp));
     }
+
 
     @GetMapping("/{paperId}")
     public ResponseEntity<ApiResult<PaperViewResp>> getById(@PathVariable Long paperId) {
