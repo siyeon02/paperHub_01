@@ -17,6 +17,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -320,6 +322,34 @@ public class PaperService {
 
         paper.setFingerprint(fingerprint);
         return paper;
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadPdf(Long paperId) {
+        Paper paper = paperRepository.findById(paperId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+        String storageUri = paper.getStorageUri();
+        if (storageUri == null || storageUri.isBlank()) {
+            throw new BusinessException(ErrorCode.PAPER_NOT_FOUND);
+        }
+        try {
+            Path path = storageUri.startsWith("file:")
+                    ? Paths.get(java.net.URI.create(storageUri))
+                    : Paths.get(storageUri);
+            if (!Files.exists(path)) {
+                throw new BusinessException(ErrorCode.PAPER_NOT_FOUND);
+            }
+            InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ);
+            String filename = path.getFileName().toString();
+            return new InputStreamResource(inputStream) {
+                @Override
+                public String getFilename() {
+                    return filename;
+                }
+            };
+        } catch (IOException | IllegalArgumentException e) {
+            throw new IllegalStateException("PDF 파일을 읽을 수 없습니다.", e);
+        }
     }
 
     @Transactional(readOnly = true)
