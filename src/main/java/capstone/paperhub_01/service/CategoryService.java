@@ -48,7 +48,7 @@ public class CategoryService {
 
         var infoOpt = paperInfoRepository.findByPaper_Id(paperId);
         if (infoOpt.isEmpty() && arxivId != null && !arxivId.isBlank()) {
-            infoOpt = paperInfoRepository.findByArxivId(arxivId.trim());
+            infoOpt = findByArxivVariants(arxivId);
         }
         if (infoOpt.isEmpty()) {
             log.warn("[CatSync] PaperInfo not found for paperId={}, arxivId={}", paperId, arxivId);
@@ -119,6 +119,57 @@ public class CategoryService {
                 .filter(c -> !c.isEmpty())
                 .distinct()
                 .toList();
+    }
+
+    private java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> findByArxivVariants(String arxivId) {
+        String trimmed = arxivId == null ? null : arxivId.trim();
+        if (trimmed == null || trimmed.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+
+        java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> direct = paperInfoRepository.findByArxivId(trimmed);
+        if (direct.isPresent()) return direct;
+
+        java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> directIgnore = paperInfoRepository.findByArxivIdIgnoreCase(trimmed);
+        if (directIgnore.isPresent()) return directIgnore;
+
+        String withoutPrefix = trimmed.replaceFirst("^arXiv\\s*", "");
+        if (!withoutPrefix.equals(trimmed)) {
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> prefixed = paperInfoRepository.findByArxivId(withoutPrefix);
+            if (prefixed.isPresent()) return prefixed;
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> prefixedIgnore = paperInfoRepository.findByArxivIdIgnoreCase(withoutPrefix);
+            if (prefixedIgnore.isPresent()) return prefixedIgnore;
+        }
+
+        String baseId = stripVersion(withoutPrefixOrSelf(trimmed));
+        if (!baseId.equals(trimmed)) {
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> base = paperInfoRepository.findByArxivId(baseId);
+            if (base.isPresent()) return base;
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> baseIgnore = paperInfoRepository.findByArxivIdIgnoreCase(baseId);
+            if (baseIgnore.isPresent()) return baseIgnore;
+        }
+
+        if (!withoutPrefix.equals(trimmed)) {
+            String baseFromNoPrefix = stripVersion(withoutPrefix);
+            if (!baseFromNoPrefix.equals(withoutPrefix)) {
+                java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> base2 = paperInfoRepository.findByArxivId(baseFromNoPrefix);
+                if (base2.isPresent()) return base2;
+                java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> baseIgnore2 = paperInfoRepository.findByArxivIdIgnoreCase(baseFromNoPrefix);
+                if (baseIgnore2.isPresent()) return baseIgnore2;
+            }
+        }
+
+        return java.util.Optional.empty();
+    }
+
+    private String withoutPrefixOrSelf(String arxivId) {
+        if (arxivId == null) return "";
+        return arxivId.replaceFirst("^arXiv\\s*", "");
+    }
+
+    private String stripVersion(String arxivId) {
+        if (arxivId == null) return "";
+        return arxivId.trim().replaceFirst("v\\d+$", "");
     }
 
 
