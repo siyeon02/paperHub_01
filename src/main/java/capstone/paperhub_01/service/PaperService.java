@@ -17,6 +17,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,8 +40,113 @@ public class PaperService {
     private final PaperInfoRepository paperInfoRepository;
     private final CategoryService categoryService;
 
+//    @Transactional
+//    public PaperCreateResp uploadAndExtractFromPath(Path path, Long memberId) {
+//        Member member = memberRepository.findById(memberId)
+//                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+//
+//        try {
+//            byte[] bytes = Files.readAllBytes(path);
+//            String sha256 = sha256Hex(bytes);
+//
+//            // 1) DB 중복 체크: 있으면 파일은 건드리지 않고 바로 리턴
+//            var existing = paperRepository.findBySha256(sha256);
+//            if (existing.isPresent()) {
+//                Paper paper = existing.get();
+//                categoryService.syncFromPaperInfo(paper.getId(), null);
+//
+//                return PaperCreateResp.from(existing.get());
+//            }
+//
+//            // 2) 최종 저장 경로
+//            Path baseDir = Paths.get(storageProperties.getBaseDir());
+//            Files.createDirectories(baseDir);
+//            Path dest = baseDir.resolve(sha256 + ".pdf");
+//
+//            // 3) 파일이 이미 있으면 재사용 (DB만 새로 저장)
+//            if (Files.exists(dest)) {
+//                // pass
+//            } else {
+//                // 3-1) 임시 파일에 먼저 쓰고 → 원자적 이동(경합에도 안전)
+//                Path tmp = Files.createTempFile(baseDir, sha256, ".part");
+//                try {
+//                    Files.write(tmp, bytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+//                    try {
+//                        Files.move(tmp, dest, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+//                    } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+//                        // 파일시스템에 따라 ATOMIC_MOVE가 안 될 수 있어 대체 플랜
+//                        Files.move(tmp, dest);
+//                    }
+//                } catch (FileAlreadyExistsException e) {
+//                    // 동시성: 다른 쓰레드/요청이 먼저 만들었을 수 있음 → 무시하고 진행
+//                    try { Files.deleteIfExists(tmp); } catch (Exception ignore) {}
+//                }
+//            }
+//
+//            String storageUri = "file://" + dest.toAbsolutePath();
+//
+//            // 4) PDF 메타데이터 추출 (bytes 그대로 사용해도 OK)
+//            int numPages;
+//            List<Map<String,Object>> pageSizes = new ArrayList<>();
+//            Map<String,Object> infoJson = new LinkedHashMap<>();
+//            Map<String,Object> xmpJson = null;
+//
+//            try (PDDocument doc = Loader.loadPDF(bytes)) {
+//                numPages = doc.getNumberOfPages();
+//
+//                var info = doc.getDocumentInformation();
+//                if (info != null) {
+//                    putIfNotNull(infoJson, "Title", info.getTitle());
+//                    putIfNotNull(infoJson, "Author", info.getAuthor());
+//                    putIfNotNull(infoJson, "Subject", info.getSubject());
+//                    putIfNotNull(infoJson, "Keywords", info.getKeywords());
+//                    putIfNotNull(infoJson, "Creator", info.getCreator());
+//                    putIfNotNull(infoJson, "Producer", info.getProducer());
+//                    putIfNotNull(infoJson, "CreationDate", info.getCreationDate());
+//                    putIfNotNull(infoJson, "ModificationDate", info.getModificationDate());
+//                }
+//
+//                for (int i = 0; i < numPages; i++) {
+//                    var mb = doc.getPage(i).getMediaBox();
+//                    pageSizes.add(Map.of("w", (double) mb.getWidth(), "h", (double) mb.getHeight()));
+//                }
+//
+//                var md = doc.getDocumentCatalog().getMetadata();
+//                if (md != null) {
+//                    try (InputStream is = md.createInputStream()) {
+//                        xmpJson = Map.of("raw", new String(is.readAllBytes(), StandardCharsets.UTF_8));
+//                    } catch (Exception ignore) {}
+//                }
+//            }
+//
+//            // 5) 엔티티 저장
+//            var paper = Paper.builder()
+//                    .sha256(sha256)
+//                    .fingerprint(null)
+//                    .infoJson(infoJson.isEmpty() ? null : infoJson)
+//                    .xmpJson(xmpJson)
+//                    .numPages(numPages)
+//                    .pageSizes(pageSizes)
+//                    .storageUri(storageUri)
+//                    .uploaderId(String.valueOf(member.getId()))
+//                    .createdAt(OffsetDateTime.now())
+//                    .build();
+//
+//            paperRepository.save(paper);
+//
+//            String extractedArxivId = extractArxivIdFromPath(path);
+//
+//            categoryService.syncFromPaperInfo(paper.getId(), extractedArxivId);
+//
+//            return PaperCreateResp.from(paper);
+//
+//        } catch (IOException e) {
+//            throw new IllegalStateException("PDF 업로드/추출 실패: " + e.getMessage(), e);
+//        }
+//    }
+
     @Transactional
-    public PaperCreateResp uploadAndExtractFromPath(Path path, Long memberId) {
+    public PaperCreateResp uploadAndExtractFromPath(Path path, String originalFilename, Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -47,42 +154,35 @@ public class PaperService {
             byte[] bytes = Files.readAllBytes(path);
             String sha256 = sha256Hex(bytes);
 
-            // 1) DB 중복 체크: 있으면 파일은 건드리지 않고 바로 리턴
+            // 1) 중복 문서면 멱등 동기화 후 반환
             var existing = paperRepository.findBySha256(sha256);
             if (existing.isPresent()) {
                 Paper paper = existing.get();
-                syncCategoriesFromPaperInfo(paper, paper.getPaperInfo().getArxivId());
-                return PaperCreateResp.from(existing.get());
+                categoryService.syncFromPaperInfo(paper.getId(), null); // paper_id 우선
+                return PaperCreateResp.from(paper);
             }
 
-            // 2) 최종 저장 경로
+            // 2) 파일 저장 (sha256.pdf)
             Path baseDir = Paths.get(storageProperties.getBaseDir());
             Files.createDirectories(baseDir);
             Path dest = baseDir.resolve(sha256 + ".pdf");
-
-            // 3) 파일이 이미 있으면 재사용 (DB만 새로 저장)
-            if (Files.exists(dest)) {
-                // pass
-            } else {
-                // 3-1) 임시 파일에 먼저 쓰고 → 원자적 이동(경합에도 안전)
+            if (!Files.exists(dest)) {
                 Path tmp = Files.createTempFile(baseDir, sha256, ".part");
                 try {
                     Files.write(tmp, bytes, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
                     try {
-                        Files.move(tmp, dest, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
-                    } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-                        // 파일시스템에 따라 ATOMIC_MOVE가 안 될 수 있어 대체 플랜
+                        Files.move(tmp, dest, StandardCopyOption.ATOMIC_MOVE);
+                    } catch (AtomicMoveNotSupportedException e) {
                         Files.move(tmp, dest);
                     }
                 } catch (FileAlreadyExistsException e) {
-                    // 동시성: 다른 쓰레드/요청이 먼저 만들었을 수 있음 → 무시하고 진행
                     try { Files.deleteIfExists(tmp); } catch (Exception ignore) {}
                 }
             }
 
             String storageUri = "file://" + dest.toAbsolutePath();
 
-            // 4) PDF 메타데이터 추출 (bytes 그대로 사용해도 OK)
+            // 3) 메타 추출
             int numPages;
             List<Map<String,Object>> pageSizes = new ArrayList<>();
             Map<String,Object> infoJson = new LinkedHashMap<>();
@@ -90,7 +190,6 @@ public class PaperService {
 
             try (PDDocument doc = Loader.loadPDF(bytes)) {
                 numPages = doc.getNumberOfPages();
-
                 var info = doc.getDocumentInformation();
                 if (info != null) {
                     putIfNotNull(infoJson, "Title", info.getTitle());
@@ -102,12 +201,10 @@ public class PaperService {
                     putIfNotNull(infoJson, "CreationDate", info.getCreationDate());
                     putIfNotNull(infoJson, "ModificationDate", info.getModificationDate());
                 }
-
                 for (int i = 0; i < numPages; i++) {
                     var mb = doc.getPage(i).getMediaBox();
                     pageSizes.add(Map.of("w", (double) mb.getWidth(), "h", (double) mb.getHeight()));
                 }
-
                 var md = doc.getDocumentCatalog().getMetadata();
                 if (md != null) {
                     try (InputStream is = md.createInputStream()) {
@@ -116,7 +213,7 @@ public class PaperService {
                 }
             }
 
-            // 5) 엔티티 저장
+            // 4) Paper 저장
             var paper = Paper.builder()
                     .sha256(sha256)
                     .fingerprint(null)
@@ -128,12 +225,15 @@ public class PaperService {
                     .uploaderId(String.valueOf(member.getId()))
                     .createdAt(OffsetDateTime.now())
                     .build();
-
             paperRepository.save(paper);
 
-            String extractedArxivId = extractArxivIdFromPath(dest);
+            // 5) ✅ arXiv ID 추출: originalFilename → path → PDF 본문(1~2p) 순서로 시도
+            String arxivId = tryExtractArxivId(originalFilename);
+            if (arxivId == null) arxivId = tryExtractArxivId(path.getFileName().toString());
+            if (arxivId == null) arxivId = tryExtractArxivIdFromPdf(bytes);
 
-            syncCategoriesFromPaperInfo(paper, extractedArxivId);
+            // 6) 카테고리 동기화 (paper_id 우선, arxivId 버전/비버전 둘 다 시도는 CategoryService에서)
+            categoryService.syncFromPaperInfo(paper.getId(), arxivId);
 
             return PaperCreateResp.from(paper);
 
@@ -142,26 +242,26 @@ public class PaperService {
         }
     }
 
-    /** PaperInfo에서 카테고리 코드를 찾아 부모부터 생성→PaperCategory 링크(멱등) */
-    private void syncCategoriesFromPaperInfo(Paper paper, String arXivId) {
-        // 1) paper_id → 2) sha256 → 3) sourceId 순으로 PaperInfo 탐색
-        Optional<PaperInfo> infoOpt = paperInfoRepository.findByPaper_Id(paper.getId());
+    private static final java.util.regex.Pattern ARXIV_RX_FULL =
+            java.util.regex.Pattern.compile("(?:arXiv\\s*:\\s*)?(\\d{4}\\.\\d{4,5}(?:v\\d+)?)",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
 
-        if (infoOpt.isEmpty() && arXivId != null && !arXivId.isBlank()) {
-            infoOpt = paperInfoRepository.findByArxivId(arXivId);
+    private String tryExtractArxivId(String source) {
+        if (source == null || source.isBlank()) return null;
+        var m = ARXIV_RX_FULL.matcher(source);
+        return m.find() ? m.group(1) : null; // 예: 1812.10425v1
+    }
+
+    private String tryExtractArxivIdFromPdf(byte[] bytes) {
+        try (PDDocument doc = Loader.loadPDF(bytes)) {
+            var stripper = new org.apache.pdfbox.text.PDFTextStripper();
+            stripper.setStartPage(1);
+            stripper.setEndPage(Math.min(2, doc.getNumberOfPages())); // 1~2페이지에서만 검색
+            String txt = stripper.getText(doc);
+            return tryExtractArxivId(txt);
+        } catch (Exception e) {
+            return null;
         }
-
-        // 2) FK 백필 (크롤링 선저장 모델이므로 paper_id 가 비어 있을 수 있음)
-        infoOpt.ifPresent(info -> {
-            if (info.getPaper() == null) {
-                info.setPaper(paper); // FK 채움
-            }
-            // 3) 카테고리 동기화
-            List<String> codes = extractCodesFromInfo(info); // CSV/JSONB 파싱
-            if (!codes.isEmpty()) {
-                categoryService.syncPaperCategories(paper, codes);
-            }
-        });
     }
 
     private String extractArxivIdFromPath(Path path) {
@@ -222,6 +322,34 @@ public class PaperService {
 
         paper.setFingerprint(fingerprint);
         return paper;
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadPdf(Long paperId) {
+        Paper paper = paperRepository.findById(paperId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+        String storageUri = paper.getStorageUri();
+        if (storageUri == null || storageUri.isBlank()) {
+            throw new BusinessException(ErrorCode.PAPER_NOT_FOUND);
+        }
+        try {
+            Path path = storageUri.startsWith("file:")
+                    ? Paths.get(java.net.URI.create(storageUri))
+                    : Paths.get(storageUri);
+            if (!Files.exists(path)) {
+                throw new BusinessException(ErrorCode.PAPER_NOT_FOUND);
+            }
+            InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ);
+            String filename = path.getFileName().toString();
+            return new InputStreamResource(inputStream) {
+                @Override
+                public String getFilename() {
+                    return filename;
+                }
+            };
+        } catch (IOException | IllegalArgumentException e) {
+            throw new IllegalStateException("PDF 파일을 읽을 수 없습니다.", e);
+        }
     }
 
     @Transactional(readOnly = true)

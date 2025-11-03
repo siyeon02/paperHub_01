@@ -13,20 +13,24 @@ import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.Paper;
 
+import capstone.paperhub_01.domain.paper.PaperInfo;
 import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
+import java.util.Objects;
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -37,22 +41,55 @@ public class CategoryService {
     private final MemberRepository memberRepository;
     private final ObjectMapper objectMapper;
 
+
     @Transactional
-    public void attachCategoriesFromInfo(Long paperId, List<String> codes) {
+    public void syncFromPaperInfo(Long paperId, @Nullable String arxivId) {
         Paper paper = paperRepository.getReferenceById(paperId);
 
-        for (String code : codes) {
+        var infoOpt = paperInfoRepository.findByPaper_Id(paperId);
+        if (infoOpt.isEmpty() && arxivId != null && !arxivId.isBlank()) {
+            infoOpt = findByArxivVariants(arxivId);
+        }
+        if (infoOpt.isEmpty()) {
+            log.warn("[CatSync] PaperInfo not found for paperId={}, arxivId={}", paperId, arxivId);
+            return;
+        }
+
+        PaperInfo info = infoOpt.get();
+
+        // ✅ FK 백필 후 반드시 저장
+        if (info.getPaper() == null) {
+            info.setPaper(paper);
+            paperInfoRepository.save(info);      // ← 추가
+        }
+
+        List<String> codes = extractCodesFromInfo(info);
+        if (codes == null || codes.isEmpty()) {
+            log.warn("[CatSync] categories empty for paperId={}, arxivId={}", paperId, arxivId);
+            return;
+        }
+        syncPaperCategories(paper, codes);
+    }
+
+
+    @Transactional
+    public void syncPaperCategories(Paper paper, List<String> codes) {
+        if (codes == null || codes.isEmpty()) return;
+
+        for (String raw : codes) {
+            String code = normalize(raw);
+            if (code.isEmpty()) continue;
+
             Category category = getOrCreateHierarchy(code);
-            PaperCategoryId id = new PaperCategoryId(paper.getId(), category.getCode());
-            if (!paperCategoryRepository.existsById(id.getPaperId())) {
+
+            // ✅ 멱등 체크는 (paper_id, category_code)로!
+            if (!paperCategoryRepository.existsByPaper_IdAndCategory_Code(paper.getId(), category.getCode())) {
                 paperCategoryRepository.save(PaperCategory.link(paper, category));
             }
         }
     }
 
-
     private Category getOrCreateHierarchy(String code) {
-        // 1) 루트부터 순차 생성: "cs" -> "cs.AI" -> "cs.AI.Deep" 처럼 다단계도 안전
         String[] parts = code.split("\\.");
         StringBuilder acc = new StringBuilder();
         Category parent = null;
@@ -64,31 +101,77 @@ public class CategoryService {
 
             Category current = categoryRepository.findById(cur).orElse(null);
             if (current == null) {
+                // name은 우선 code로. 필요시 별도 사전으로 rename 가능
                 current = Category.of(cur, cur, parent);
                 categoryRepository.save(current);
-            } else {
-                // 필요시 이름 동기화 로직(외부에서 사람이 친화적 이름을 주입할 때)
-                // current.rename(humanNameFromDictOrNull(cur));
             }
             parent = current;
         }
-        return parent; // 마지막 노드
+        return parent;
     }
 
-    @Transactional
-    public void syncPaperCategories(Paper paper, List<String> codes) {
-        if (codes == null || codes.isEmpty()) return;
+    private List<String> extractCodesFromInfo(PaperInfo info) {
+        List<String> arr = info.getCategories();
+        if (arr == null) return List.of();
+        return arr.stream()
+                .filter(Objects::nonNull)
+                .map(this::normalize)
+                .filter(c -> !c.isEmpty())
+                .distinct()
+                .toList();
+    }
 
-        for (String raw : codes) {
-            String code = normalize(raw);
-            if (code.isEmpty()) continue;
-            Category category = getOrCreateHierarchy(code);
-            PaperCategoryId id = new PaperCategoryId(paper.getId(), category.getCode());
-            if (!paperCategoryRepository.existsById(id.getPaperId())) {
-                paperCategoryRepository.save(PaperCategory.link(paper, category));
+    private java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> findByArxivVariants(String arxivId) {
+        String trimmed = arxivId == null ? null : arxivId.trim();
+        if (trimmed == null || trimmed.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+
+        java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> direct = paperInfoRepository.findByArxivId(trimmed);
+        if (direct.isPresent()) return direct;
+
+        java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> directIgnore = paperInfoRepository.findByArxivIdIgnoreCase(trimmed);
+        if (directIgnore.isPresent()) return directIgnore;
+
+        String withoutPrefix = trimmed.replaceFirst("^arXiv\\s*", "");
+        if (!withoutPrefix.equals(trimmed)) {
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> prefixed = paperInfoRepository.findByArxivId(withoutPrefix);
+            if (prefixed.isPresent()) return prefixed;
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> prefixedIgnore = paperInfoRepository.findByArxivIdIgnoreCase(withoutPrefix);
+            if (prefixedIgnore.isPresent()) return prefixedIgnore;
+        }
+
+        String baseId = stripVersion(withoutPrefixOrSelf(trimmed));
+        if (!baseId.equals(trimmed)) {
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> base = paperInfoRepository.findByArxivId(baseId);
+            if (base.isPresent()) return base;
+            java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> baseIgnore = paperInfoRepository.findByArxivIdIgnoreCase(baseId);
+            if (baseIgnore.isPresent()) return baseIgnore;
+        }
+
+        if (!withoutPrefix.equals(trimmed)) {
+            String baseFromNoPrefix = stripVersion(withoutPrefix);
+            if (!baseFromNoPrefix.equals(withoutPrefix)) {
+                java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> base2 = paperInfoRepository.findByArxivId(baseFromNoPrefix);
+                if (base2.isPresent()) return base2;
+                java.util.Optional<capstone.paperhub_01.domain.paper.PaperInfo> baseIgnore2 = paperInfoRepository.findByArxivIdIgnoreCase(baseFromNoPrefix);
+                if (baseIgnore2.isPresent()) return baseIgnore2;
             }
         }
+
+        return java.util.Optional.empty();
     }
+
+    private String withoutPrefixOrSelf(String arxivId) {
+        if (arxivId == null) return "";
+        return arxivId.replaceFirst("^arXiv\\s*", "");
+    }
+
+    private String stripVersion(String arxivId) {
+        if (arxivId == null) return "";
+        return arxivId.trim().replaceFirst("v\\d+$", "");
+    }
+
 
     private String normalize(String s) {
         return s == null ? "" : s.trim().replaceAll("\\s+", "");
@@ -109,9 +192,7 @@ public class CategoryService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        return withCounts
-                ? categoryRepository.findRootSummariesWithCounts(pageable)
-                : categoryRepository.findRootSummaries(pageable);
+        return categoryRepository.findRootSummaries(pageable);
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +202,7 @@ public class CategoryService {
             throw new IllegalArgumentException("Category not found: " + code);
         }
 
-        return categoryRepository.findChildrenWithDirectCounts(code, pageable);
+        return categoryRepository.findChildrenNoRollup(code, pageable);
 
 
 
