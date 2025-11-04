@@ -36,3 +36,11 @@ pinecone:
   apiKey: ${PINECONE_API_KEY:pcsk_4N174X_M87YqzLwgiiW79HgaqaS3o9jFGX5bwn7ZeM36UQwDWreqtUg8RkMwtWMiC42y2B}
   queryUrl: https://paper-keywords-ntuygv9.svc.aped-4627-b74a.pinecone.io/query   # Pinecone 콘솔의 Query URL
   namespace: ${PINECONE_NAMESPACE:}
+
+
+aws:
+  s3:
+    bucket: paperhub01
+    region: us-east-1
+    base-url-style: s3
+
