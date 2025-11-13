@@ -17,15 +17,15 @@ public class RecommendationService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
 
-    public List<RecommendResp> getSimilarPapers(String arxivId, int topK) {
+    public List<RecommendResp> getSimilarPapers(String searchId, int topK) {
         try {
-            String json = pineconeClient.queryById(arxivId, topK + 5); // 여유분 요청
+            String json = pineconeClient.queryById(searchId, topK + 5); // 여유분 요청
             JsonNode root = objectMapper.readTree(json);
 
             List<RecommendResp> results = new ArrayList<>();
             for (JsonNode m : root.path("matches")) {
                 String id = m.path("id").asText("");
-                if (id.isEmpty() || arxivId.equals(id)) continue; // 자기 자신 제외
+                if (id.isEmpty() || searchId.equals(id)) continue; // 자기 자신 제외
 
                 JsonNode meta = m.path("metadata");
                 String title = meta.path("title").asText("");

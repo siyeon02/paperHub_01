@@ -18,9 +18,9 @@ import java.util.List;
 public class RecommendController {
     private final RecommendationService recommendationService;
 
-    @GetMapping("/similar/{arXivId}")
-    public ResponseEntity<ApiResult<List<RecommendResp>>> recommend(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String arXivId, @RequestParam(defaultValue = "10") int k) {
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(recommendationService.getSimilarPapers(arXivId, k)));
+    @GetMapping("/similar/{searchId}")
+    public ResponseEntity<ApiResult<List<RecommendResp>>> recommend(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String searchId, @RequestParam(defaultValue = "10") int k) {
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(recommendationService.getSimilarPapers(searchId, k)));
     }
 
 }
