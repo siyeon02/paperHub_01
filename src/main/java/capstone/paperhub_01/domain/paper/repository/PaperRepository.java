@@ -1,6 +1,7 @@
 package capstone.paperhub_01.domain.paper.repository;
 
 import capstone.paperhub_01.domain.paper.Paper;
+import capstone.paperhub_01.domain.paper.PaperInfo;
 import org.apache.el.stream.Stream;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;

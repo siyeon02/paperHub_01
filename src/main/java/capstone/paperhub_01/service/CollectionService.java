@@ -8,10 +8,13 @@ import capstone.paperhub_01.domain.collection.repository.CollectionPaperReposito
 import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.Paper;
+import capstone.paperhub_01.domain.paper.PaperInfo;
 import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +36,7 @@ public class CollectionService {
     private final CollectionPaperRepository collectionPaperRepository;
     private final MemberRepository memberRepository;
     private final PaperInfoRepository paperInfoRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public CollectionPaperCreateResp createCollectionPapers(String status, CollectionPaperCreateReq req, Long memberId) {
@@ -135,15 +139,8 @@ public class CollectionService {
         r.setUpdatedAt(cp.getUpdatedAt());
 
         // PaperInfo
-        var info = cp.getPaper().getPaperInfo();
-        if (info != null) {
-            r.setTitle(info.getTitle());
-            r.setAuthors(info.getAuthors());
-            r.setPrimaryCategory(info.getPrimaryCategory());
-            r.setCategories(info.getCategories());
-            r.setArxivId(info.getArxivId());
-            r.setPdfUrl(info.getPdfUrl());
-        }
+        PaperInfo info = resolvePaperInfo(cp.getPaper());
+        populateListResp(r, cp.getPaper(), info);
         return r;
     }
 
@@ -162,20 +159,8 @@ public class CollectionService {
         r.setAddedAt(cp.getAddedAt());
         r.setUpdatedAt(cp.getUpdatedAt());
 
-        //paperInfo 정보 추가
-
-        var info = cp.getPaper().getPaperInfo();
-        if (info != null) {
-
-            r.setTitle(info.getTitle());
-            r.setArxivId(info.getArxivId());
-            r.setAbstractText(info.getAbstractText());
-            r.setPrimaryCategory(info.getPrimaryCategory());
-            r.setPdfUrl(info.getPdfUrl());
-            r.setAuthorsJson(info.getAuthors());
-            r.setCategoriesJson(info.getCategories());
-            r.setPublishedDate(info.getPublishedDate());
-        }
+        PaperInfo info = resolvePaperInfo(cp.getPaper());
+        populateDetailResp(r, cp.getPaper(), info);
 
         return r;
     }
@@ -194,6 +179,109 @@ public class CollectionService {
         collectionPaperRepository.delete(cp);
 
         return resp;
+    }
+
+    private PaperInfo resolvePaperInfo(Paper paper) {
+        if (paper == null) return null;
+        PaperInfo info = paper.getPaperInfo();
+        if (info != null) return info;
+        return paperInfoRepository.findByPaper_Id(paper.getId()).orElse(null);
+    }
+
+    private void populateListResp(CollectionPaperListResp target, Paper paper, PaperInfo info) {
+        if (target == null) {
+            return;
+        }
+        if (info != null) {
+            target.setTitle(info.getTitle());
+            target.setAuthors(info.getAuthors());
+            target.setPrimaryCategory(info.getPrimaryCategory());
+            target.setCategories(encodeCategories(info.getCategories()));
+            target.setArxivId(info.getArxivId());
+            target.setPdfUrl(resolvePdfUrl(info, paper));
+        } else {
+            applyFallback(target, paper);
+        }
+    }
+
+    private void populateDetailResp(CollectionPaperInfo target, Paper paper, PaperInfo info) {
+        if (target == null) {
+            return;
+        }
+        if (info != null) {
+            target.setTitle(info.getTitle());
+            target.setArxivId(info.getArxivId());
+            target.setAbstractText(info.getAbstractText());
+            target.setPrimaryCategory(info.getPrimaryCategory());
+            target.setPdfUrl(resolvePdfUrl(info, paper));
+            target.setAuthorsJson(info.getAuthors());
+            target.setCategoriesJson(encodeCategories(info.getCategories()));
+            target.setPublishedDate(info.getPublishedDate());
+        } else {
+            applyFallback(target, paper);
+        }
+    }
+
+    private void applyFallback(CollectionPaperListResp target, Paper paper) {
+        if (target == null || paper == null) {
+            return;
+        }
+        java.util.Map<String, Object> meta = paper.getInfoJson();
+        if (meta != null) {
+            Object title = meta.getOrDefault("Title", meta.get("title"));
+            if (title instanceof String titleStr && !titleStr.isBlank()) {
+                target.setTitle(titleStr);
+            }
+            Object author = meta.getOrDefault("Author", meta.get("author"));
+            if (author != null) {
+                target.setAuthors(author.toString());
+            }
+        }
+        target.setPdfUrl(resolvePdfUrl(null, paper));
+    }
+
+    private void applyFallback(CollectionPaperInfo target, Paper paper) {
+        if (target == null || paper == null) {
+            return;
+        }
+        java.util.Map<String, Object> meta = paper.getInfoJson();
+        if (meta != null) {
+            Object title = meta.getOrDefault("Title", meta.get("title"));
+            if (title instanceof String titleStr && !titleStr.isBlank()) {
+                target.setTitle(titleStr);
+            }
+        }
+        target.setPdfUrl(resolvePdfUrl(null, paper));
+    }
+
+    private String encodeCategories(java.util.List<String> categories) {
+        if (categories == null) return null;
+        try {
+            return objectMapper.writeValueAsString(categories);
+        } catch (JsonProcessingException e) {
+            return categories.toString();
+        }
+    }
+
+    private String resolvePdfUrl(PaperInfo info, Paper paper) {
+        if (info != null) {
+            String url = info.getPdfUrl();
+            if (url != null && !url.isBlank()) {
+                return url;
+            }
+            String arxivId = info.getArxivId();
+            if (arxivId != null && !arxivId.isBlank()) {
+                String cleaned = arxivId.trim().replaceFirst("^arXiv:\s*", "");
+                if (!cleaned.isEmpty()) {
+                    String candidate = cleaned.endsWith(".pdf") ? cleaned : cleaned + ".pdf";
+                    return "https://arxiv.org/pdf/" + candidate.replaceAll("\\s", "");
+                }
+            }
+        }
+        if (paper != null && paper.getId() != null) {
+            return "/api/papers/" + paper.getId() + "/file";
+        }
+        return null;
     }
 
     @Transactional(readOnly = true)
