@@ -48,7 +48,7 @@ public class UserPaperStats {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    /** 한 세션이 끝났을 때 (예: 뷰어 닫을 때) */
+    //한 세션 끝났을 때
     public void recordSession(int sessionSeconds, Integer lastPage, Integer maxPage, Integer totalPageCount) {
         totalSessions++;
         totalReadTimeSec += sessionSeconds;
