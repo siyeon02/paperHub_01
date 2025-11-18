@@ -69,7 +69,7 @@ public class WebSecurityConfig {
         ));
         // 또는 CloudFront 커스텀 도메인을 쓰게 되면 여기에 추가
         //configuration.setAllowedOriginPatterns(List.of("*")); // 테스트용 전체 허용
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
