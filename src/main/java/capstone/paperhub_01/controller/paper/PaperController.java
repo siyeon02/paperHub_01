@@ -10,6 +10,7 @@ import capstone.paperhub_01.domain.member.Member;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.security.entity.UserDetailsImpl;
 import capstone.paperhub_01.service.PaperService;
+import capstone.paperhub_01.service.UserPaperStatsService;
 import capstone.paperhub_01.util.ApiResult;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.nio.file.Paths;
 @RequiredArgsConstructor
 public class PaperController {
     private final PaperService paperService;
+    private final UserPaperStatsService userPaperStatsService;
 
 //    @PostMapping(value = "/register-from-url", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 //    public ResponseEntity<ApiResult<PaperCreateResp>> upload(
@@ -90,7 +92,7 @@ public class PaperController {
         try {
             Long memberId = userDetails.getUser().getId();
 
-            // ✅ 원본 파일명 전달 (없으면 빈 문자열)
+            //원본 파일명 전달 (없으면 빈 문자열)
             String originalFilename = file.getOriginalFilename();
             resp = paperService.uploadAndExtractFromPath(localTmp, originalFilename, memberId);
 
@@ -103,7 +105,9 @@ public class PaperController {
 
 
     @GetMapping("/{paperId}")
-    public ResponseEntity<ApiResult<PaperViewResp>> getById(@PathVariable Long paperId) {
+    public ResponseEntity<ApiResult<PaperViewResp>> getById(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable Long paperId) {
+        Long userId = userDetails.getUser().getId();
+        userPaperStatsService.recordOpen(userId, paperId);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(paperService.getById(paperId)));
     }
 
