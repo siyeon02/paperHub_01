@@ -1,5 +1,6 @@
 package capstone.paperhub_01.domain.paper.repository;
 
+import capstone.paperhub_01.domain.paper.Paper;
 import capstone.paperhub_01.domain.paper.PaperInfo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +45,8 @@ public interface PaperInfoRepository extends JpaRepository<PaperInfo, Long> {
                                                @Param("category") String category,
                                                @Param("rollup") boolean rollup,
                                                Pageable pageable);
+
+    Long paper(Paper paper);
 
     interface CategoryAgg {
         String getCode();
