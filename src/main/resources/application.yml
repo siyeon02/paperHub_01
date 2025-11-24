@@ -44,3 +44,7 @@ aws:
     region: us-east-1
     base-url-style: s3
 
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4.1-mini
+
