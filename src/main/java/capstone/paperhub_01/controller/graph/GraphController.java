@@ -22,8 +22,8 @@ public class GraphController {
     private final GraphService graphService;
     private final RecommendationService recommendationService;
 
-    @GetMapping("/graph/{paperInfoId}")
-    public ResponseEntity<ApiResult<GraphResp>> getGraph(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("paperInfoId") String paperInfoId) {
+    @GetMapping("/graph/{arxivId}")
+    public ResponseEntity<ApiResult<GraphResp>> getGraph(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("arxivId") String paperInfoId) {
         // 1. Pinecone에서 추천 받아오기
         List<RecommendResp> recs = recommendationService.getSimilarPapers(paperInfoId, 10);
         System.out.println("Pinecone recs: " + recs.size());
