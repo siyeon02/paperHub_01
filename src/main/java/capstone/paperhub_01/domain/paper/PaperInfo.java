@@ -57,6 +57,13 @@ public class PaperInfo {
 
     private String pdfUrl;
 
+    @Column(length = 500)
+    private String venue;
+
+    @Column(length = 50)
+    private String venueType;
+
+
 
     // 값 객체(업서트 입력용)
     public record PaperInfoUpsert(
