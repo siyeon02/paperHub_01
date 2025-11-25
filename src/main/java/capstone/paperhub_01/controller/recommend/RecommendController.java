@@ -1,5 +1,6 @@
 package capstone.paperhub_01.controller.recommend;
 
+import capstone.paperhub_01.controller.recommend.response.RecommendExplanationResp;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
 import capstone.paperhub_01.security.entity.UserDetailsImpl;
 import capstone.paperhub_01.service.RecommendationService;
@@ -21,6 +22,17 @@ public class RecommendController {
     @GetMapping("/similar/{searchId}")
     public ResponseEntity<ApiResult<List<RecommendResp>>> recommend(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String searchId, @RequestParam(defaultValue = "10") int k) {
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(recommendationService.getSimilarPapers(searchId, k)));
+    }
+
+    @GetMapping("/similar/{searchId}/{recId}/explanation")
+    public ResponseEntity<ApiResult<RecommendExplanationResp>> getExplanation(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable String searchId,
+            @PathVariable String recId
+    ) {
+        return ResponseEntity.ok(ApiResult.success(
+                recommendationService.getExplanation(searchId, recId)
+        ));
     }
 
 

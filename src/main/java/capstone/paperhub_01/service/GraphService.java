@@ -26,13 +26,13 @@ public class GraphService {
     private final MemberRepository memberRepository;
     private final PaperInfoRepository paperInfoRepository;
 
-    public GraphResp buildPaperGraph(String paperInfoId, List<RecommendResp> recs) {
+    public GraphResp buildPaperGraph(String arxivId, List<RecommendResp> recs) {
 
         List<NodeResp> nodes = new ArrayList<>();
         List<EdgeResp> edges = new ArrayList<>();
 
         // 1. 중심 논문 정보를 DB에서 조회
-        PaperInfo center = paperInfoRepository.findById(Long.valueOf(paperInfoId))
+        PaperInfo center = paperInfoRepository.findByArxivId(arxivId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
 
         // 2. 중심 노드 추가
@@ -52,7 +52,7 @@ public class GraphService {
         for (RecommendResp r : recs) {
 
             // 혹시 center가 똑같이 들어왔으면 스킵
-            if (paperInfoId.equals(r.getArxivId())) {
+            if (arxivId.equals(r.getArxivId())) {
                 continue;
             }
 
@@ -76,7 +76,7 @@ public class GraphService {
                     abstractText,
                     String.join(", ", r.getAuthors()),
                     primaryCategory,
-                    r.getPublished() // RecommendResp.published가 이미 yyyy-MM-dd
+                    r.getPublished()
             );
             nodes.add(node);
 
@@ -84,7 +84,7 @@ public class GraphService {
             EdgeResp edge = new EdgeResp(
                     null,                       // edge id 굳이 없으면 null
                     "similar",
-                    paperInfoId,              // source
+                    arxivId,              // source
                     r.getArxivId(),             // target
                     r.getScore(),               // weight
                     rank++                      // rank

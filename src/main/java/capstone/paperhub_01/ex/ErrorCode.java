@@ -18,6 +18,8 @@ public enum ErrorCode {
     MEMO_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "해당 메모를 찾을 수 없습니다."),
     NO_BODY(HttpStatus.NO_CONTENT.value(), "내용이 없습니다."),
     INVALID_STATUS(HttpStatus.BAD_REQUEST.value(), "잘못된 상태입니다."),
+    PINECONE_CONNECTION_FAIL(HttpStatus.NO_CONTENT.value(), "파인콘 연결에 실패했습니다."),
+    RECOMMENDATION_FAIL(HttpStatus.NO_CONTENT.value(), "추천 설명에 실패했습니다."),
     ;
 
     private final int status;

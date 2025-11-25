@@ -1,6 +1,10 @@
 package capstone.paperhub_01.service;
 
+import capstone.paperhub_01.controller.recommend.response.RecommendExplanationResp;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
+import capstone.paperhub_01.domain.paper.PaperInfo;
+import capstone.paperhub_01.ex.BusinessException;
+import capstone.paperhub_01.ex.ErrorCode;
 import capstone.paperhub_01.pinecone.PineconeClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,6 +19,7 @@ import java.util.*;
 public class RecommendationService {
     private final PineconeClient pineconeClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final LLMService llmService;
 
 
     public List<RecommendResp> getSimilarPapers(String searchId, int topK) {
@@ -52,7 +57,7 @@ public class RecommendationService {
 
         } catch (Exception e) {
             // 필요 시 로깅/폴백
-            throw new RuntimeException("Pinecone 응답 파싱 실패", e);
+            throw new BusinessException(ErrorCode.PINECONE_CONNECTION_FAIL);
         }
     }
 
@@ -60,4 +65,88 @@ public class RecommendationService {
         if (node == null || !node.isArray()) return List.of();
         return objectMapper.convertValue(node, new TypeReference<List<String>>() {});
     }
+
+
+    public RecommendExplanationResp getExplanation(String searchArxivId, String recArxivId) {
+        try {
+            // 1) 기준 논문 메타데이터
+            PaperMeta baseMeta = fetchMeta(searchArxivId);
+
+            // 2) 추천 논문 메타데이터
+            PaperMeta recMeta = fetchMeta(recArxivId);
+
+            // 3) 기준 논문에서 recId로 추천된 score 찾기 (없으면 0)
+            double similarity = fetchSimilarity(searchArxivId, recArxivId);
+
+            // 4) LLM 호출
+            String explanation = llmService.generateExplanation(
+                    baseMeta.title,
+                    baseMeta.keywords,
+                    recMeta.title,
+                    recMeta.keywords,
+                    similarity
+            );
+
+            // 5) DTO 변환
+            RecommendExplanationResp resp = new RecommendExplanationResp();
+            resp.setArXiVId(recArxivId);
+            resp.setExplanation(explanation);
+            return resp;
+
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.RECOMMENDATION_FAIL);
+        }
+    }
+
+    private PaperMeta fetchMeta(String arxivId) {
+        try {
+            String json = pineconeClient.queryById(arxivId, 1);
+            JsonNode root = objectMapper.readTree(json);
+
+            JsonNode match = root.path("matches").get(0);
+            JsonNode meta = match.path("metadata");
+
+            return new PaperMeta(
+                    arxivId,
+                    meta.path("title").asText(""),
+                    nodeToList(meta.path("authors")),
+                    nodeToList(meta.path("keywords"))
+            );
+
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.PINECONE_CONNECTION_FAIL);
+        }
+    }
+
+    private double fetchSimilarity(String baseId, String recId) {
+        try {
+            String json = pineconeClient.queryById(baseId, 20);
+            JsonNode root = objectMapper.readTree(json);
+
+            for (JsonNode m : root.path("matches")) {
+                if (recId.equals(m.path("id").asText(""))) {
+                    return m.path("score").asDouble(0.0);
+                }
+            }
+            return 0.0;
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    private static class PaperMeta {
+        String arxivId;
+        String title;
+        List<String> authors;
+        List<String> keywords;
+
+
+        PaperMeta(String arxivId, String title, List<String> authors, List<String> keywords) {
+            this.arxivId = arxivId;
+            this.title = title;
+            this.authors = authors;
+            this.keywords = keywords;
+        }
+    }
+
 }
