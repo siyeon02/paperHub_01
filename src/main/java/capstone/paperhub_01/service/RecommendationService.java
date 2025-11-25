@@ -67,16 +67,16 @@ public class RecommendationService {
     }
 
 
-    public RecommendExplanationResp getExplanation(String searchId, String recId) {
+    public RecommendExplanationResp getExplanation(String searchArxivId, String recArxivId) {
         try {
             // 1) 기준 논문 메타데이터
-            PaperMeta baseMeta = fetchMeta(searchId);
+            PaperMeta baseMeta = fetchMeta(searchArxivId);
 
             // 2) 추천 논문 메타데이터
-            PaperMeta recMeta = fetchMeta(recId);
+            PaperMeta recMeta = fetchMeta(recArxivId);
 
             // 3) 기준 논문에서 recId로 추천된 score 찾기 (없으면 0)
-            double similarity = fetchSimilarity(searchId, recId);
+            double similarity = fetchSimilarity(searchArxivId, recArxivId);
 
             // 4) LLM 호출
             String explanation = llmService.generateExplanation(
@@ -89,7 +89,7 @@ public class RecommendationService {
 
             // 5) DTO 변환
             RecommendExplanationResp resp = new RecommendExplanationResp();
-            resp.setArXiVId(recId);
+            resp.setArXiVId(recArxivId);
             resp.setExplanation(explanation);
             return resp;
 
