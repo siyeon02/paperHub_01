@@ -40,6 +40,7 @@ public class PaperService {
     private final PaperInfoRepository paperInfoRepository;
     private final CategoryService categoryService;
     private final S3Service s3Service;
+    private final UserPaperStatsService userPaperStatsService;
 
 //s3이전 버전
 //    @Transactional

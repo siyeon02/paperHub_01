@@ -23,4 +23,5 @@ public class RecommendController {
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(recommendationService.getSimilarPapers(searchId, k)));
     }
 
+
 }

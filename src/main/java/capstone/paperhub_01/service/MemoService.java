@@ -6,8 +6,10 @@ import capstone.paperhub_01.controller.Annotation.response.MemoCreateResp;
 import capstone.paperhub_01.controller.Annotation.response.MemoDeleteResp;
 import capstone.paperhub_01.controller.Annotation.response.MemoEditResp;
 import capstone.paperhub_01.domain.anchor.repository.AnchorRepository;
+import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.memo.Memo;
 import capstone.paperhub_01.domain.memo.repository.MemoRepository;
+import capstone.paperhub_01.domain.paper.repository.PaperRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,9 @@ import java.util.List;
 public class MemoService {
     private final MemoRepository memoRepository;
     private final AnchorRepository anchorRepository;
+    private final UserPaperStatsService userPaperStatsService;
+    private final MemberRepository memberRepository;
+    private final PaperRepository paperRepository;
 
     @Transactional
     public Memo create(MemoCreateReq req, Long memberId) {
@@ -41,7 +46,20 @@ public class MemoService {
             var parent = memoRepository.findById(req.getParentId()).orElseThrow();
             m.setParent(parent);
         }
-        return memoRepository.save(m);
+
+        Memo saved =  memoRepository.save(m);
+
+
+        Long paperId = paperRepository.findBySha256(anchor.getPaperSha256())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND))
+                .getId();
+
+        //하이라이트 1개 추가)
+        userPaperStatsService.addMemo(memberId, paperId);
+
+        return saved;
+
+        //return memoRepository.save(m);
     }
 
     @Transactional(readOnly = true)

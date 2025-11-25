@@ -5,6 +5,10 @@ import capstone.paperhub_01.controller.Annotation.response.HighlightDeleteResp;
 import capstone.paperhub_01.domain.anchor.repository.AnchorRepository;
 import capstone.paperhub_01.domain.highlight.Highlight;
 import capstone.paperhub_01.domain.highlight.repository.HighlightRepository;
+import capstone.paperhub_01.domain.member.repository.MemberRepository;
+import capstone.paperhub_01.domain.paper.repository.PaperRepository;
+import capstone.paperhub_01.ex.BusinessException;
+import capstone.paperhub_01.ex.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,9 @@ public class HighlightService {
     private final AnchorService anchorService;
     private final HighlightRepository highlightRepository;
     private final AnchorRepository anchorRepository;
+    private final UserPaperStatsService userPaperStatsService;
+    private final MemberRepository memberRepository;
+    private final PaperRepository paperRepository;
 
     @Transactional
     public Highlight create(HighlightCreateReq req, String createdBy) {
@@ -40,7 +47,24 @@ public class HighlightService {
         h.setCreatedBy(createdBy);
         var now = OffsetDateTime.now();
         h.setCreatedAt(now); h.setUpdatedAt(now);
-        return highlightRepository.save(h);
+
+        Highlight saved = highlightRepository.save(h);
+
+        Long memberId = memberRepository.findById(Long.valueOf(createdBy))
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND))
+                .getId();
+
+        Long paperId = paperRepository.findBySha256(req.getPaperSha256())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND))
+                .getId();
+
+        //하이라이트 1개 추가)
+        userPaperStatsService.addHighlight(memberId, paperId);
+
+        return saved;
+
+
+        //return highlightRepository.save(h);
     }
 
     @Transactional
