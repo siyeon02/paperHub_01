@@ -1,0 +1,8 @@
+package capstone.paperhub_01.domain.userpaperstats.repository;
+
+import capstone.paperhub_01.domain.userpaperstats.UserPaperStats;
+import capstone.paperhub_01.domain.userpaperstats.UserPaperStatsId;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserPaperStatsRepository extends JpaRepository<UserPaperStats, UserPaperStatsId> {
+}

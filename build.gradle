@@ -30,6 +30,31 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    //LLM
+    implementation 'com.openai:openai-java:0.8.0'
+
+    //s3
+    implementation platform('software.amazon.awssdk:bom:2.25.60')
+    implementation 'software.amazon.awssdk:s3'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    //bcrypt
+    implementation 'at.favre.lib:bcrypt:0.10.2'
+
+    // JWT
+    compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
+
+    // PDF 처리
+    implementation("org.apache.pdfbox:pdfbox:3.0.2")        // 메타데이터/페이지 사이즈/텍스트 추출
+    implementation("org.apache.pdfbox:xmpbox:3.0.2")        // XMP 메타데이터(있을 경우)
+
+
+
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
