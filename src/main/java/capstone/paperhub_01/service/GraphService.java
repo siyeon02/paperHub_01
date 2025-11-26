@@ -3,6 +3,7 @@ package capstone.paperhub_01.service;
 import capstone.paperhub_01.controller.graph.response.EdgeResp;
 import capstone.paperhub_01.controller.graph.response.GraphResp;
 import capstone.paperhub_01.controller.graph.response.NodeResp;
+import capstone.paperhub_01.controller.recommend.response.PaperScoreDto;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.PaperInfo;
@@ -104,4 +105,83 @@ public class GraphService {
         return String.join(", ", authors);
     }
 
+    public GraphResp buildPaperGraphMultiFeature(String arxivId, List<PaperScoreDto> recs) {
+        List<NodeResp> nodes = new ArrayList<>();
+        List<EdgeResp> edges = new ArrayList<>();
+
+        // 1. 중심 논문 정보를 DB에서 조회
+        PaperInfo center = paperInfoRepository.findByArxivId(arxivId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+
+        // 2. 중심 노드 추가
+        NodeResp centerNode = new NodeResp(
+                center.getId(),
+                center.getArxivId(),
+                center.getTitle(),
+                center.getAbstractText(),
+                center.getAuthors(),
+                center.getPrimaryCategory(),
+                center.getPublishedDate().toString()
+        );
+        nodes.add(centerNode);
+
+        // 3. 추천 노드 + similar 엣지 추가 (멀티 피처 버전)
+        int rank = 1;
+        for (PaperScoreDto r : recs) {
+
+            // center와 동일하면 스킵
+            if (arxivId.equals(r.arxivId())) {
+                continue;
+            }
+
+            // 이미 추가된 노드인지 체크 (arxivId 기준)
+            if (containsNode(nodes, r.arxivId())) {
+                continue;
+            }
+
+            // 추천 노드: 우리 DB에 없는 논문일 수도 있으니 null 허용
+            PaperInfo maybePaper = paperInfoRepository.findByArxivId(r.arxivId())
+                    .orElse(null);
+
+            Long nodeId = maybePaper != null ? maybePaper.getId() : null;
+            String primaryCategory = maybePaper != null
+                    ? maybePaper.getPrimaryCategory()
+                    : r.primaryCategory();
+            String abstractText = maybePaper != null ? maybePaper.getAbstractText() : null;
+            String authors = maybePaper != null
+                    ? maybePaper.getAuthors()
+                    : ""; // PaperScoreDto에 authors 없으니 DB 없으면 빈 문자열
+
+            String published = null;
+            if (maybePaper != null && maybePaper.getPublishedDate() != null) {
+                published = maybePaper.getPublishedDate().toString();
+            } else if (r.publishedDate() != null) {
+                published = r.publishedDate().toString();
+            }
+
+            NodeResp node = new NodeResp(
+                    nodeId,
+                    r.arxivId(),
+                    r.title(),
+                    abstractText,
+                    authors,
+                    primaryCategory,
+                    published
+            );
+            nodes.add(node);
+
+            // similar edge 생성 (center -> recommended)
+            EdgeResp edge = new EdgeResp(
+                    null,                 // edge id 필요 없으면 null
+                    "similar",            // edge type
+                    arxivId,              // source
+                    r.arxivId(),          // target
+                    r.totalScore(),       // 멀티 피처 종합 점수를 weight로 사용
+                    rank++                // rank
+            );
+            edges.add(edge);
+        }
+
+        return new GraphResp(nodes, edges);
+    }
 }
