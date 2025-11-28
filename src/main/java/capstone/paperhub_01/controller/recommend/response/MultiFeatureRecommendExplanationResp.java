@@ -8,5 +8,6 @@ public record MultiFeatureRecommendExplanationResp(
         double venueMatch,
         double categoryMatch,
         double recency,
+        double userPreference,
         String explanation
 ) {}
