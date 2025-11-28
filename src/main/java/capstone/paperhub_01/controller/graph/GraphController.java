@@ -24,30 +24,30 @@ public class GraphController {
     private final GraphService graphService;
     private final MultiFeatureRecommenderService multiFeatureRecommenderService;
 
-//    @GetMapping("/graph/{arxivId}")
-//    public ResponseEntity<ApiResult<GraphResp>> getGraph(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("arxivId") String paperInfoId) {
-//        // 1. Pinecone에서 추천 받아오기
-//        List<RecommendResp> recs = recommendationService.getSimilarPapers(paperInfoId, 10);
-//        System.out.println("Pinecone recs: " + recs.size());
-//        recs.forEach(r -> System.out.println(r.getArxivId() + " / " + r.getScore()));
-//
-//        // 2. 그래프 변환
-//        GraphResp graph = graphService.buildPaperGraph(paperInfoId, recs);
-//
-//        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(graph));
-//    }
 
     @GetMapping("/graph/{arxivId}")
     public ResponseEntity<ApiResult<GraphResp>> getGraph(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable("arxivId") String arxivId) {
+            @PathVariable("arxivId") String arxivId
+    ) {
+        Long userId = userDetails.getUser().getId();
+
+        int k = 10;                         // 그래프에 보여줄 추천 노드 개수
+        int candidateSize = Math.max(k * 5, 50);  // Stage1에서 넉넉히 뽑을 후보 개수
 
         List<PaperScoreDto> recs =
-                multiFeatureRecommenderService.recommendPapers(arxivId, 10, null);
+                multiFeatureRecommenderService.recommendPersonalized(
+                        userId,
+                        arxivId,
+                        candidateSize,   // Stage1: Pinecone + venue 필터 후보 개수
+                        k,               // Stage2: 최종 top-k
+                        null             // excludeArxivIds
+                );
 
         GraphResp graph = graphService.buildPaperGraphMultiFeature(arxivId, recs);
 
         return ResponseEntity.ok(ApiResult.success(graph));
     }
+
 
 }

@@ -16,7 +16,8 @@ public record PaperScoreDto(
             double cosineSimilarity,
             double venueMatch,
             double categoryMatch,
-            double recency
+            double recency,
+            double userPreference
     ){}
 }
 
