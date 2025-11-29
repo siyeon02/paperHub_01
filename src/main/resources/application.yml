@@ -11,10 +11,8 @@ spring:
     name: PaperHub_01
 
   datasource:
-#    url: jdbc:postgresql://localhost:5432/paperhub
-#    username: paperhub_user
-#    password: paperhub1234
-    url: jdbc:postgresql://localhost:15432/paperhub?currentSchema=core
+    #url: jdbc:postgresql://localhost:15432/paperhub?currentSchema=core
+    url: jdbc:postgresql://3.38.5.129:5432/paperhub?currentSchema=core
     username: spring_user
     password: spring-pass
     driver-class-name: org.postgresql.Driver
