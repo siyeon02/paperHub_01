@@ -32,7 +32,6 @@ jobs:
           source: "build/libs/PaperHub_01-0.0.1-SNAPSHOT.jar"
           target: "/home/ubuntu/"
 
-
       - name: Restart service on EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -43,5 +42,6 @@ jobs:
             cd /home/ubuntu
             mv -f PaperHub_01-0.0.1-SNAPSHOT.jar app.jar
             sudo systemctl restart paperhub
+      
 
       
