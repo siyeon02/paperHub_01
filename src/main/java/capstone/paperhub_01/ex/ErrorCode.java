@@ -20,6 +20,7 @@ public enum ErrorCode {
     INVALID_STATUS(HttpStatus.BAD_REQUEST.value(), "잘못된 상태입니다."),
     PINECONE_CONNECTION_FAIL(HttpStatus.NO_CONTENT.value(), "파인콘 연결에 실패했습니다."),
     RECOMMENDATION_FAIL(HttpStatus.NO_CONTENT.value(), "추천 설명에 실패했습니다."),
+    STATS_NOT_FOUND(HttpStatus.NO_CONTENT.value(), "유저 통계 테이블이 존재하지 않습니다."),
     ;
 
     private final int status;

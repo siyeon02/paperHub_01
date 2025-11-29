@@ -1,12 +1,14 @@
 package capstone.paperhub_01.controller.graph;
 
 import capstone.paperhub_01.controller.graph.response.GraphResp;
+import capstone.paperhub_01.controller.graph.response.UserPaperStatsResp;
 import capstone.paperhub_01.controller.recommend.response.PaperScoreDto;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
 import capstone.paperhub_01.security.entity.UserDetailsImpl;
 import capstone.paperhub_01.service.GraphService;
 import capstone.paperhub_01.service.MultiFeatureRecommenderService;
 import capstone.paperhub_01.service.RecommendationService;
+import capstone.paperhub_01.service.UserPaperStatsService;
 import capstone.paperhub_01.util.ApiResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ public class GraphController {
 
     private final GraphService graphService;
     private final MultiFeatureRecommenderService multiFeatureRecommenderService;
+    private final UserPaperStatsService userPaperStatsService;
 
 
     @GetMapping("/graph/{arxivId}")
@@ -48,6 +51,27 @@ public class GraphController {
 
         return ResponseEntity.ok(ApiResult.success(graph));
     }
+
+    @GetMapping("/papers/{paperId}/userStats")
+    public ResponseEntity<ApiResult<UserPaperStatsResp>> getStats(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long paperId)
+    {
+        Long userId = user.getUser().getId();
+        UserPaperStatsResp resp = userPaperStatsService.getStats(userId, paperId);
+        return ResponseEntity.ok(ApiResult.success(resp));
+    }
+
+    @GetMapping("/userStats")
+    public ResponseEntity<ApiResult<List<UserPaperStatsResp>>> getAllStats(
+            @AuthenticationPrincipal UserDetailsImpl user
+    ) {
+        Long userId = user.getUser().getId();
+        return ResponseEntity.ok(
+                ApiResult.success(userPaperStatsService.getAllStats(userId))
+        );
+    }
+
 
 
 }

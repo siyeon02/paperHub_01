@@ -3,12 +3,16 @@ package capstone.paperhub_01.service;
 import capstone.paperhub_01.controller.graph.response.EdgeResp;
 import capstone.paperhub_01.controller.graph.response.GraphResp;
 import capstone.paperhub_01.controller.graph.response.NodeResp;
+import capstone.paperhub_01.controller.graph.response.UserPaperStatsResp;
 import capstone.paperhub_01.controller.recommend.response.PaperScoreDto;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.PaperInfo;
 import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
 import capstone.paperhub_01.domain.paper.repository.PaperRepository;
+import capstone.paperhub_01.domain.userpaperstats.UserPaperStats;
+import capstone.paperhub_01.domain.userpaperstats.UserPaperStatsId;
+import capstone.paperhub_01.domain.userpaperstats.repository.UserPaperStatsRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,7 @@ public class GraphService {
     private final RecommendationService recommendationService;
     private final MemberRepository memberRepository;
     private final PaperInfoRepository paperInfoRepository;
+    private final UserPaperStatsRepository userPaperStatsRepository;
 
     public GraphResp buildPaperGraph(String arxivId, List<RecommendResp> recs) {
 
@@ -184,4 +189,13 @@ public class GraphService {
 
         return new GraphResp(nodes, edges);
     }
+
+    public UserPaperStatsResp getStats(Long userId, Long paperId) {
+        UserPaperStatsId id = new UserPaperStatsId(userId, paperId);
+        UserPaperStats stats = userPaperStatsRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STATS_NOT_FOUND));
+
+        return UserPaperStatsResp.from(stats);
+    }
+
 }
