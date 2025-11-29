@@ -42,8 +42,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu
-            mv -f PaperHub_01-0.0.1-SNAPSHOT.jar app.jar
+            mv -f build/libs/PaperHub_01-0.0.1-SNAPSHOT.jar app.jar
             sudo systemctl restart paperhub
+
       
 
       
