@@ -6,6 +6,7 @@ import capstone.paperhub_01.controller.graph.response.NodeResp;
 import capstone.paperhub_01.controller.graph.response.UserPaperStatsResp;
 import capstone.paperhub_01.controller.recommend.response.PaperScoreDto;
 import capstone.paperhub_01.controller.recommend.response.RecommendResp;
+import capstone.paperhub_01.domain.collection.CollectionPaper;
 import capstone.paperhub_01.domain.member.repository.MemberRepository;
 import capstone.paperhub_01.domain.paper.PaperInfo;
 import capstone.paperhub_01.domain.paper.repository.PaperInfoRepository;
@@ -49,8 +50,7 @@ public class GraphService {
                 center.getAbstractText(),
                 center.getAuthors(),
                 center.getPrimaryCategory(),
-                center.getPublishedDate().toString()
-        );
+                center.getPublishedDate().toString());
         nodes.add(centerNode);
 
         // 3. 추천 노드 + similar 엣지 추가
@@ -82,18 +82,17 @@ public class GraphService {
                     abstractText,
                     String.join(", ", r.getAuthors()),
                     primaryCategory,
-                    r.getPublished()
-            );
+                    r.getPublished());
             nodes.add(node);
 
             // similar edge 생성 (center -> recommended)
             EdgeResp edge = new EdgeResp(
-                    null,                       // edge id 굳이 없으면 null
+                    null, // edge id 굳이 없으면 null
                     "similar",
-                    arxivId,              // source
-                    r.getArxivId(),             // target
-                    r.getScore(),               // weight
-                    rank++                      // rank
+                    arxivId, // source
+                    r.getArxivId(), // target
+                    r.getScore(), // weight
+                    rank++ // rank
             );
             edges.add(edge);
         }
@@ -106,7 +105,8 @@ public class GraphService {
     }
 
     private String joinAuthors(List<String> authors) {
-        if (authors == null || authors.isEmpty()) return "";
+        if (authors == null || authors.isEmpty())
+            return "";
         return String.join(", ", authors);
     }
 
@@ -126,8 +126,7 @@ public class GraphService {
                 center.getAbstractText(),
                 center.getAuthors(),
                 center.getPrimaryCategory(),
-                center.getPublishedDate().toString()
-        );
+                center.getPublishedDate().toString());
         nodes.add(centerNode);
 
         // 3. 추천 노드 + similar 엣지 추가 (멀티 피처 버전)
@@ -171,18 +170,17 @@ public class GraphService {
                     abstractText,
                     authors,
                     primaryCategory,
-                    published
-            );
+                    published);
             nodes.add(node);
 
             // similar edge 생성 (center -> recommended)
             EdgeResp edge = new EdgeResp(
-                    null,                 // edge id 필요 없으면 null
-                    "similar",            // edge type
-                    arxivId,              // source
-                    r.arxivId(),          // target
-                    r.totalScore(),       // 멀티 피처 종합 점수를 weight로 사용
-                    rank++                // rank
+                    null, // edge id 필요 없으면 null
+                    "similar", // edge type
+                    arxivId, // source
+                    r.arxivId(), // target
+                    r.totalScore(), // 멀티 피처 종합 점수를 weight로 사용
+                    rank++ // rank
             );
             edges.add(edge);
         }
@@ -198,4 +196,30 @@ public class GraphService {
         return UserPaperStatsResp.from(stats);
     }
 
+    public GraphResp buildLibraryGraph(List<CollectionPaper> papers) {
+        List<NodeResp> nodes = new ArrayList<>();
+        List<EdgeResp> edges = new ArrayList<>();
+
+        for (CollectionPaper cp : papers) {
+            PaperInfo info = cp.getPaper().getPaperInfo();
+            // PaperInfo가 없으면 paperInfoRepository에서 찾기 (fetch join으로 가져왔으면 있을 것)
+            if (info == null) {
+                info = paperInfoRepository.findByPaper_Id(cp.getPaper().getId()).orElse(null);
+            }
+
+            if (info != null) {
+                NodeResp node = new NodeResp(
+                        info.getId(),
+                        info.getArxivId(),
+                        info.getTitle(),
+                        info.getAbstractText(),
+                        info.getAuthors(),
+                        info.getPrimaryCategory(),
+                        info.getPublishedDate() != null ? info.getPublishedDate().toString() : null);
+                nodes.add(node);
+            }
+        }
+        // 엣지는 일단 없음 (노드만 뿌려줌)
+        return new GraphResp(nodes, edges);
+    }
 }
