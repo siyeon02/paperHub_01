@@ -20,8 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-
-
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -30,17 +28,23 @@ public class CollectionController {
     private final CollectionService collectionService;
 
     @PostMapping("/collections/{status}")
-    public ResponseEntity<ApiResult<CollectionPaperCreateResp>> createCollectionPapers(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("status") String status, @Valid @RequestBody CollectionPaperCreateReq req) {
+    public ResponseEntity<ApiResult<CollectionPaperCreateResp>> createCollectionPapers(
+            @AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("status") String status,
+            @Valid @RequestBody CollectionPaperCreateReq req) {
         Member member = userDetails.getUser();
         ReadingStatus rs = parseStatus(status);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResult.success(collectionService.createCollectionPapers(status, req, member.getId())));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResult.success(collectionService.createCollectionPapers(status, req, member.getId())));
     }
 
     @PatchMapping("/collection-items/{status}/{id}")
-    public ResponseEntity<ApiResult<StatusChangeResp>> changeCollectionStatus(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("status") String status, @PathVariable("id") Long id){
+    public ResponseEntity<ApiResult<StatusChangeResp>> changeCollectionStatus(
+            @AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable("status") String status,
+            @PathVariable("id") Long id) {
         Member member = userDetails.getUser();
         ReadingStatus rs = parseStatus(status);
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(collectionService.changeCollectionStatus(status, id, member.getId())));
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResult.success(collectionService.changeCollectionStatus(status, id, member.getId())));
     }
 
     @GetMapping("/collections/{status}")
@@ -49,8 +53,7 @@ public class CollectionController {
             @PathVariable("status") String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "updatedAt,desc") String sort)
-    {
+            @RequestParam(defaultValue = "updatedAt,desc") String sort) {
         Member member = userDetails.getUser();
         ReadingStatus rs = parseStatus(status);
         Pageable pageable = PageRequest.of(page, size, Sort.by(parseSort(sort)));
@@ -61,8 +64,7 @@ public class CollectionController {
     @GetMapping("/collection-items/{id}")
     public ResponseEntity<ApiResult<CollectionPaperInfo>> retrieveCollectionPaperInfo(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable("id") Long id)
-    {
+            @PathVariable("id") Long id) {
         Member member = userDetails.getUser();
         var resp = collectionService.retrieveCollectionPaperInfo(id, member.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
@@ -71,25 +73,22 @@ public class CollectionController {
     @DeleteMapping("/collection-items/{id}")
     public ResponseEntity<ApiResult<DeleteCollectionPaperResp>> deleteCollectionPaper(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable("id") Long id
-            )
-    {
+            @PathVariable("id") Long id) {
         Member member = userDetails.getUser();
         var resp = collectionService.deleteCollectionPaper(member.getId(), id);
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 
     @GetMapping("/collections/count")
-    public ResponseEntity<ApiResult<CollectionStatusCountResp>> countCollections(@AuthenticationPrincipal UserDetailsImpl userDetails){
+    public ResponseEntity<ApiResult<CollectionStatusCountResp>> countCollections(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
         Member member = userDetails.getUser();
         var resp = collectionService.countCollections(member.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(resp));
     }
 
-
-
     private ReadingStatus parseStatus(String s) {
-        String norm = s.trim().toLowerCase().replace('_','-');
+        String norm = s.trim().toLowerCase().replace('_', '-');
         return switch (norm) {
             case "to-read", "toread" -> ReadingStatus.TO_READ;
             case "in-progress", "inprogress" -> ReadingStatus.IN_PROGRESS;
@@ -98,7 +97,7 @@ public class CollectionController {
         };
     }
 
-    private Sort.Order parseSort(String s){
+    private Sort.Order parseSort(String s) {
         // "updatedAt,desc" → Sort.Order.desc("updatedAt")
         String[] arr = s.split(",");
         String prop = arr[0];
