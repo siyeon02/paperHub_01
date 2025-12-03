@@ -1,5 +1,6 @@
 package capstone.paperhub_01.service;
 
+import capstone.paperhub_01.controller.graph.response.UserPaperStatsResp;
 import capstone.paperhub_01.domain.userpaperstats.UserPaperStats;
 import capstone.paperhub_01.domain.userpaperstats.UserPaperStatsId;
 import capstone.paperhub_01.domain.userpaperstats.repository.UserPaperStatsRepository;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -98,9 +100,18 @@ public class UserPaperStatsService {
      * 조회용 예시 – 필요하면 응답 DTO로 변환해서 반환하면 됨.
      */
     @Transactional(readOnly = true)
-    public UserPaperStats getStats(Long userId, Long paperId) {
+    public UserPaperStatsResp getStats(Long userId, Long paperId) {
         UserPaperStatsId id = new UserPaperStatsId(userId, paperId);
-        return userPaperStatsRepository.findById(id)
+        UserPaperStats userPaperStats = userPaperStatsRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("통계 데이터가 존재하지 않습니다. userId=" + userId + ", paperId=" + paperId));
+        return UserPaperStatsResp.from(userPaperStats);
     }
+
+    public List<UserPaperStatsResp> getAllStats(Long userId) {
+        return userPaperStatsRepository.findAllByIdUserId(userId)
+                .stream()
+                .map(UserPaperStatsResp::from)
+                .toList();
+    }
+
 }

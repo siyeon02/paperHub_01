@@ -51,4 +51,15 @@ public class S3Service {
         }
         return "s3://" + props.getBucket() + "/" + key;
     }
+
+    public byte[] getBytes(String key) {
+        try {
+            return s3.getObjectAsBytes(software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
+                    .bucket(props.getBucket())
+                    .key(key)
+                    .build()).asByteArray();
+        } catch (S3Exception e) {
+            throw new IllegalStateException("Failed to download from S3: " + key, e);
+        }
+    }
 }

@@ -22,6 +22,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +41,7 @@ public class PaperService {
     private final FileStorageProperties storageProperties;
     private final PaperInfoRepository paperInfoRepository;
     private final CategoryService categoryService;
+    @Lazy @Autowired private PaperService self;
     private final S3Service s3Service;
     private final UserPaperStatsService userPaperStatsService;
 
@@ -123,7 +126,7 @@ public class PaperService {
 //                    .build();
 //
 //            try {
-//                paperRepository.saveAndFlush(paper); // 즉시 INSERT 발생시켜 충돌 빨리 감지
+//                self.savePaperSafely(paper); // 즉시 INSERT 발생시켜 충돌 빨리 감지
 //            } catch (org.springframework.dao.DataIntegrityViolationException dup) {
 //                // 유니크 제약(uk_paper_sha256) 충돌: 다른 트랜잭션이 먼저 넣었음
 //                paper = paperRepository.findBySha256(sha256)
@@ -212,7 +215,7 @@ public class PaperService {
                     .build();
 
             try {
-                paperRepository.saveAndFlush(paper);
+                self.savePaperSafely(paper);
             } catch (DataIntegrityViolationException dup) {
                 paper = paperRepository.findBySha256(sha256)
                         .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
@@ -327,5 +330,18 @@ public class PaperService {
                     .orElseThrow(()-> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
         }
         throw new IllegalArgumentException("Either sha256 or fingerprint must be provided.");
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void savePaperSafely(Paper paper) {
+        paperRepository.saveAndFlush(paper);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] loadPaperFile(Long paperId) {
+        Paper paper = paperRepository.findById(paperId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+        String key = paper.getSha256() + ".pdf";
+        return s3Service.getBytes(key);
     }
 }

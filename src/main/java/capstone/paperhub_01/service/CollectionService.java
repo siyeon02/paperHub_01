@@ -21,12 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.time.OffsetDateTime;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +37,8 @@ public class CollectionService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public CollectionPaperCreateResp createCollectionPapers(String status, CollectionPaperCreateReq req, Long memberId) {
+    public CollectionPaperCreateResp createCollectionPapers(String status, CollectionPaperCreateReq req,
+            Long memberId) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -48,7 +47,6 @@ public class CollectionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
 
         ReadingStatus rs = parseStatus(status);
-
 
         CollectionPaper cp = new CollectionPaper();
         cp.setMember(member);
@@ -59,7 +57,6 @@ public class CollectionService {
         cp.setUpdatedAt(OffsetDateTime.now());
 
         collectionPaperRepository.save(cp);
-
 
         CollectionPaperCreateResp resp = new CollectionPaperCreateResp();
         resp.setCollectionPaperId(cp.getId());
@@ -91,7 +88,6 @@ public class CollectionService {
 
         CollectionPaper cp = collectionPaperRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
-
 
         if (cp.getStatus() != target) {
             cp.setStatus(target);
@@ -127,6 +123,11 @@ public class CollectionService {
         resp.setTotalPages(page.getTotalPages());
         resp.setLast(page.isLast());
         return resp;
+    }
+
+    @Transactional(readOnly = true)
+    public List<CollectionPaper> retrieveAllCollectionPapers(Long memberId, ReadingStatus rs) {
+        return collectionPaperRepository.findAllByMemberAndStatus(memberId, rs);
     }
 
     private CollectionPaperListResp toResp(CollectionPaper cp) {
@@ -182,9 +183,11 @@ public class CollectionService {
     }
 
     private PaperInfo resolvePaperInfo(Paper paper) {
-        if (paper == null) return null;
+        if (paper == null)
+            return null;
         PaperInfo info = paper.getPaperInfo();
-        if (info != null) return info;
+        if (info != null)
+            return info;
         return paperInfoRepository.findByPaper_Id(paper.getId()).orElse(null);
     }
 
@@ -255,7 +258,8 @@ public class CollectionService {
     }
 
     private String encodeCategories(java.util.List<String> categories) {
-        if (categories == null) return null;
+        if (categories == null)
+            return null;
         try {
             return objectMapper.writeValueAsString(categories);
         } catch (JsonProcessingException e) {
@@ -286,8 +290,8 @@ public class CollectionService {
 
     @Transactional(readOnly = true)
     public CollectionStatusCountResp countCollections(Long memberId) {
-        List<CollectionPaperRepository.StatusCountProjection> counts =
-                collectionPaperRepository.countByMemberGrouped(memberId);
+        List<CollectionPaperRepository.StatusCountProjection> counts = collectionPaperRepository
+                .countByMemberGrouped(memberId);
 
         // 기본값(0) 포함시켜서 응답
         Map<ReadingStatus, Long> map = new EnumMap<>(ReadingStatus.class);
