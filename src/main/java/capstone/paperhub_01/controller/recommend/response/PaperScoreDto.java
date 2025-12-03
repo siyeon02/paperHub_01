@@ -1,6 +1,7 @@
 package capstone.paperhub_01.controller.recommend.response;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record PaperScoreDto(
         String arxivId,
@@ -10,7 +11,8 @@ public record PaperScoreDto(
         String primaryCategory,
         LocalDate publishedDate,
         double totalScore,
-        ScoreDetail scores
+        ScoreDetail scores,
+        List<String> keywords
 ) {
     public record ScoreDetail(
             double cosineSimilarity,

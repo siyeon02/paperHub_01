@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,4 +16,5 @@ public class EdgeResp {
     private String target;
     private Double weight;    // cosine score or citation weight
     private Integer rank;
+    private List<String> keywords;
 }
