@@ -48,13 +48,39 @@ public class MultiFeatureRecommenderService {
     }
 
     // --------- 2. 코사인 유사도 (Pinecone) ---------
-    private List<Map.Entry<String, Double>> computeCosineSimilarity(String arxivId, int topK) {
+//    private List<Map.Entry<String, Double>> computeCosineSimilarity(String arxivId, int topK) {
+//        try {
+//            // 너가 원래 쓰던 pineconeClient.queryById 그대로 활용 (JSON 반환 가정)
+//            String json = pineconeClient.queryById(arxivId, topK + 1);
+//
+//            JsonNode root = new ObjectMapper().readTree(json);
+//            List<Map.Entry<String, Double>> result = new ArrayList<>();
+//
+//            for (JsonNode m : root.path("matches")) {
+//                String id = m.path("id").asText("");
+//                if (id.isEmpty() || arxivId.equals(id)) continue;
+//
+//                double score = m.path("score").asDouble(0.0);
+//
+//                // metadata에 arxiv_id가 따로 있으면 그걸 쓰고, 없으면 id 사용
+//                String arxiv = m.path("metadata").path("arxiv_id").asText(id);
+//
+//                result.add(Map.entry(arxiv, score));
+//            }
+//
+//            return result;
+//        } catch (Exception e) {
+//            // 로그만 찍고 빈 리스트
+//            return List.of();
+//        }
+//    }
+
+    private List<PineconeMatch> computeCosineSimilarity(String arxivId, int topK) {
         try {
-            // 너가 원래 쓰던 pineconeClient.queryById 그대로 활용 (JSON 반환 가정)
             String json = pineconeClient.queryById(arxivId, topK + 1);
 
             JsonNode root = new ObjectMapper().readTree(json);
-            List<Map.Entry<String, Double>> result = new ArrayList<>();
+            List<PineconeMatch> result = new ArrayList<>();
 
             for (JsonNode m : root.path("matches")) {
                 String id = m.path("id").asText("");
@@ -62,18 +88,28 @@ public class MultiFeatureRecommenderService {
 
                 double score = m.path("score").asDouble(0.0);
 
-                // metadata에 arxiv_id가 따로 있으면 그걸 쓰고, 없으면 id 사용
-                String arxiv = m.path("metadata").path("arxiv_id").asText(id);
+                JsonNode meta = m.path("metadata");
+                String arxiv = meta.path("arxiv_id").asText(id);
 
-                result.add(Map.entry(arxiv, score));
+                // ★ keywords 파싱 (파인콘 metadata.keywords 배열 가정)
+                List<String> keywords = new ArrayList<>();
+                for (JsonNode kwNode : meta.path("keywords")) {
+                    String kw = kwNode.asText("").trim();
+                    if (!kw.isEmpty()) {
+                        keywords.add(kw);
+                    }
+                }
+
+                result.add(new PineconeMatch(arxiv, score, keywords));
             }
 
             return result;
         } catch (Exception e) {
-            // 로그만 찍고 빈 리스트
+            log.warn("Pinecone query failed in computeCosineSimilarity", e);
             return List.of();
         }
     }
+
 
     // --------- 3. 점수 계산 함수들 ---------
     private double computeVenueScore(String targetVenue, String candidateVenue) {
@@ -152,7 +188,8 @@ public class MultiFeatureRecommenderService {
                         p.getPrimaryCategory(),
                         p.getPublishedDate(),
                         1.0,
-                        new PaperScoreDto.ScoreDetail(0, 0, 0, 0,0)
+                        new PaperScoreDto.ScoreDetail(0, 0, 0, 0,0),
+                        List.of()
                 ))
                 .toList();
     }
@@ -266,6 +303,7 @@ public class MultiFeatureRecommenderService {
             if (exclude.contains(p.getArxivId())) continue;
 
             double cosine = cand.cosineScore();
+            List<String> keywords = cand.keywords();
             double venueScore = computeVenueScore(source.getVenue(), p.getVenue());
             double categoryScore = computeCategoryScore(
                     source.getPrimaryCategory(), p.getPrimaryCategory());
@@ -295,7 +333,8 @@ public class MultiFeatureRecommenderService {
                     p.getPrimaryCategory(),
                     p.getPublishedDate(),
                     total,
-                    detail
+                    detail,
+                    keywords
             ));
 
         }
@@ -308,42 +347,83 @@ public class MultiFeatureRecommenderService {
 
 
     //stage 1
+//    private List<Candidate> pickCandidatesByPineconeAndVenue(String sourceArxivId,
+//                                                             int candidateSize) {
+//        PaperInfo source = getPaperMetadata(sourceArxivId);
+//        if (source == null) {
+//            // 기준 논문 없으면 그냥 Pinecone topN 통째로 넘기는 fallback
+//            return pickCandidatesByPineconeOnly(sourceArxivId, candidateSize);
+//        }
+//
+//        String sourceVenue = source.getVenue();
+//        boolean useVenueFilter = (sourceVenue != null && !sourceVenue.isBlank());
+//
+//        List<Map.Entry<String, Double>> sims = computeCosineSimilarity(sourceArxivId, 200);
+//        List<Candidate> candidates = new ArrayList<>();
+//
+//        for (Map.Entry<String, Double> entry : sims) {
+//            String candArxivId = entry.getKey();
+//            double cosine = entry.getValue();
+//
+//            PaperInfo candPaper = getPaperMetadata(candArxivId);
+//            if (candPaper == null) continue;
+//
+//            if (useVenueFilter) {
+//                double venueScore = computeVenueScore(sourceVenue, candPaper.getVenue());
+//                // threshold 너무 세면 다 잘려나가니 일단 0.3 정도로 완화
+//                if (venueScore < 0.3) {
+//                    continue;
+//                }
+//            }
+//
+//            candidates.add(new Candidate(candPaper, cosine));
+//            if (candidates.size() >= candidateSize) {
+//                break;
+//            }
+//        }
+//
+//        // venue 필터를 썼는데 후보가 하나도 없으면 → fallback: venue 필터 없이 한 번 더
+//        if (candidates.isEmpty() && useVenueFilter) {
+//            return pickCandidatesByPineconeOnly(sourceArxivId, candidateSize);
+//        }
+//
+//        return candidates;
+//    }
+
     private List<Candidate> pickCandidatesByPineconeAndVenue(String sourceArxivId,
                                                              int candidateSize) {
         PaperInfo source = getPaperMetadata(sourceArxivId);
         if (source == null) {
-            // 기준 논문 없으면 그냥 Pinecone topN 통째로 넘기는 fallback
             return pickCandidatesByPineconeOnly(sourceArxivId, candidateSize);
         }
 
         String sourceVenue = source.getVenue();
         boolean useVenueFilter = (sourceVenue != null && !sourceVenue.isBlank());
 
-        List<Map.Entry<String, Double>> sims = computeCosineSimilarity(sourceArxivId, 200);
+        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, 200);
         List<Candidate> candidates = new ArrayList<>();
 
-        for (Map.Entry<String, Double> entry : sims) {
-            String candArxivId = entry.getKey();
-            double cosine = entry.getValue();
+        for (PineconeMatch match : sims) {
+            String candArxivId = match.arxivId();
+            double cosine = match.cosineScore();
+            List<String> candKeywords = match.keywords();
 
             PaperInfo candPaper = getPaperMetadata(candArxivId);
             if (candPaper == null) continue;
 
             if (useVenueFilter) {
                 double venueScore = computeVenueScore(sourceVenue, candPaper.getVenue());
-                // threshold 너무 세면 다 잘려나가니 일단 0.3 정도로 완화
                 if (venueScore < 0.3) {
                     continue;
                 }
             }
 
-            candidates.add(new Candidate(candPaper, cosine));
+            candidates.add(new Candidate(candPaper, cosine, candKeywords));
             if (candidates.size() >= candidateSize) {
                 break;
             }
         }
 
-        // venue 필터를 썼는데 후보가 하나도 없으면 → fallback: venue 필터 없이 한 번 더
         if (candidates.isEmpty() && useVenueFilter) {
             return pickCandidatesByPineconeOnly(sourceArxivId, candidateSize);
         }
@@ -351,19 +431,43 @@ public class MultiFeatureRecommenderService {
         return candidates;
     }
 
+
+
+
     // venue 필터 없이 Pinecone 상위만 쓰는 fallback
+//    private List<Candidate> pickCandidatesByPineconeOnly(String sourceArxivId, int candidateSize) {
+//        List<Map.Entry<String, Double>> sims = computeCosineSimilarity(sourceArxivId, candidateSize);
+//        List<Candidate> candidates = new ArrayList<>();
+//
+//        for (Map.Entry<String, Double> entry : sims) {
+//            String candArxivId = entry.getKey();
+//            double cosine = entry.getValue();
+//
+//            PaperInfo candPaper = getPaperMetadata(candArxivId);
+//            if (candPaper == null) continue;
+//
+//            candidates.add(new Candidate(candPaper, cosine));
+//            if (candidates.size() >= candidateSize) {
+//                break;
+//            }
+//        }
+//
+//        return candidates;
+//    }
+
     private List<Candidate> pickCandidatesByPineconeOnly(String sourceArxivId, int candidateSize) {
-        List<Map.Entry<String, Double>> sims = computeCosineSimilarity(sourceArxivId, candidateSize);
+        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, candidateSize);
         List<Candidate> candidates = new ArrayList<>();
 
-        for (Map.Entry<String, Double> entry : sims) {
-            String candArxivId = entry.getKey();
-            double cosine = entry.getValue();
+        for (PineconeMatch match : sims) {
+            String candArxivId = match.arxivId();
+            double cosine = match.cosineScore();
+            List<String> candKeywords = match.keywords();
 
             PaperInfo candPaper = getPaperMetadata(candArxivId);
             if (candPaper == null) continue;
 
-            candidates.add(new Candidate(candPaper, cosine));
+            candidates.add(new Candidate(candPaper, cosine, candKeywords));
             if (candidates.size() >= candidateSize) {
                 break;
             }
@@ -371,6 +475,7 @@ public class MultiFeatureRecommenderService {
 
         return candidates;
     }
+
 
     //stage 2
     private UserProfile buildUserProfile(Long userId) {
@@ -447,7 +552,7 @@ public class MultiFeatureRecommenderService {
     }
 
     // Stage1 후보용 내부 DTO
-    private record Candidate(PaperInfo paper, double cosineScore) {}
+    private record Candidate(PaperInfo paper, double cosineScore, List<String> keywords) {}
 
 
 
@@ -476,6 +581,13 @@ public class MultiFeatureRecommenderService {
         Map<String, CategoryPref> categoryMap = new HashMap<>();
         Map<String, VenuePref> venueMap = new HashMap<>();
     }
+
+    // Pinecone match 정보: arxivId + 코사인 점수 + keywords
+    private record PineconeMatch(
+            String arxivId,
+            double cosineScore,
+            List<String> keywords
+    ) {}
 
 
 
