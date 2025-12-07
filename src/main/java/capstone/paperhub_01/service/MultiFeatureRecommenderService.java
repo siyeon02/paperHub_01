@@ -401,7 +401,7 @@ public class MultiFeatureRecommenderService {
 
             if (useVenueFilter) {
                 double venueScore = computeVenueScore(sourceVenue, candPaper.getVenue());
-                if (venueScore < 0.3) {
+                if (venueScore < 0.2) {
                     continue;
                 }
             }
