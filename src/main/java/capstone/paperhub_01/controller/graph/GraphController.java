@@ -11,6 +11,7 @@ import capstone.paperhub_01.service.MultiFeatureRecommenderService;
 import capstone.paperhub_01.service.UserPaperStatsService;
 import capstone.paperhub_01.util.ApiResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Slf4j
 public class GraphController {
 
     private final GraphService graphService;
@@ -43,6 +45,8 @@ public class GraphController {
                 k, // Stage2: 최종 top-k
                 null // excludeArxivIds
         );
+
+        log.info("[GRAPH] recs size = {}", recs.size());
 
         GraphResp graph = graphService.buildPaperGraphMultiFeature(arxivId, recs);
 
