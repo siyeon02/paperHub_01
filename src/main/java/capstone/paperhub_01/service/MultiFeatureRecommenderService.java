@@ -374,7 +374,7 @@ public class MultiFeatureRecommenderService {
         String sourceVenue = source.getVenue();
         boolean useVenueFilter = (sourceVenue != null && !sourceVenue.isBlank());
 
-        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, 50);
+        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, 100);
 
         // 1. Pinecone에서 온 arxivId들을 먼저 모으고
         List<String> arxivIds = sims.stream()
