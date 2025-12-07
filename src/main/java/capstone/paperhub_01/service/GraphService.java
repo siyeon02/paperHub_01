@@ -16,6 +16,7 @@ import capstone.paperhub_01.domain.userpaperstats.UserPaperStatsId;
 import capstone.paperhub_01.domain.userpaperstats.repository.UserPaperStatsRepository;
 import capstone.paperhub_01.ex.BusinessException;
 import capstone.paperhub_01.ex.ErrorCode;
+import capstone.paperhub_01.pinecone.PineconeClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,73 +33,74 @@ public class GraphService {
     private final MemberRepository memberRepository;
     private final PaperInfoRepository paperInfoRepository;
     private final UserPaperStatsRepository userPaperStatsRepository;
+    private final PineconeClient pineconeClient;
 
-    public GraphResp buildPaperGraph(String arxivId, List<RecommendResp> recs) {
-
-        List<NodeResp> nodes = new ArrayList<>();
-        List<EdgeResp> edges = new ArrayList<>();
-
-        // 1. 중심 논문 정보를 DB에서 조회
-        PaperInfo center = paperInfoRepository.findByArxivId(arxivId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
-
-        // 2. 중심 노드 추가
-        NodeResp centerNode = new NodeResp(
-                center.getId(),
-                center.getArxivId(),
-                center.getTitle(),
-                center.getAbstractText(),
-                center.getAuthors(),
-                center.getPrimaryCategory(),
-                center.getPublishedDate().toString());
-        nodes.add(centerNode);
-
-        // 3. 추천 노드 + similar 엣지 추가
-        int rank = 1;
-        for (RecommendResp r : recs) {
-
-            // 혹시 center가 똑같이 들어왔으면 스킵
-            if (arxivId.equals(r.getArxivId())) {
-                continue;
-            }
-
-            // (선택) 이미 nodes에 있는 arXivId인지 체크해서 중복 방지
-            if (containsNode(nodes, r.getArxivId())) {
-                continue;
-            }
-
-            // 추천 노드: 우리 DB에 없는 논문일 수도 있으니, 안전하게 null 허용
-            PaperInfo maybePaper = paperInfoRepository.findByArxivId(r.getArxivId())
-                    .orElse(null);
-
-            Long nodeId = maybePaper != null ? maybePaper.getId() : null;
-            String primaryCategory = maybePaper != null ? maybePaper.getPrimaryCategory() : null;
-            String abstractText = maybePaper != null ? maybePaper.getAbstractText() : null;
-
-            NodeResp node = new NodeResp(
-                    nodeId,
-                    r.getArxivId(),
-                    r.getTitle(),
-                    abstractText,
-                    String.join(", ", r.getAuthors()),
-                    primaryCategory,
-                    r.getPublished());
-            nodes.add(node);
-
-            // similar edge 생성 (center -> recommended)
-            EdgeResp edge = new EdgeResp(
-                    null, // edge id 굳이 없으면 null
-                    "similar",
-                    arxivId, // source
-                    r.getArxivId(), // target
-                    r.getScore(), // weight
-                    rank++ // rank
-            );
-            edges.add(edge);
-        }
-
-        return new GraphResp(nodes, edges);
-    }
+//    public GraphResp buildPaperGraph(String arxivId, List<RecommendResp> recs) {
+//
+//        List<NodeResp> nodes = new ArrayList<>();
+//        List<EdgeResp> edges = new ArrayList<>();
+//
+//        // 1. 중심 논문 정보를 DB에서 조회
+//        PaperInfo center = paperInfoRepository.findByArxivId(arxivId)
+//                .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+//
+//        // 2. 중심 노드 추가
+//        NodeResp centerNode = new NodeResp(
+//                center.getId(),
+//                center.getArxivId(),
+//                center.getTitle(),
+//                center.getAbstractText(),
+//                center.getAuthors(),
+//                center.getPrimaryCategory(),
+//                center.getPublishedDate().toString());
+//        nodes.add(centerNode);
+//
+//        // 3. 추천 노드 + similar 엣지 추가
+//        int rank = 1;
+//        for (RecommendResp r : recs) {
+//
+//            // 혹시 center가 똑같이 들어왔으면 스킵
+//            if (arxivId.equals(r.getArxivId())) {
+//                continue;
+//            }
+//
+//            // (선택) 이미 nodes에 있는 arXivId인지 체크해서 중복 방지
+//            if (containsNode(nodes, r.getArxivId())) {
+//                continue;
+//            }
+//
+//            // 추천 노드: 우리 DB에 없는 논문일 수도 있으니, 안전하게 null 허용
+//            PaperInfo maybePaper = paperInfoRepository.findByArxivId(r.getArxivId())
+//                    .orElse(null);
+//
+//            Long nodeId = maybePaper != null ? maybePaper.getId() : null;
+//            String primaryCategory = maybePaper != null ? maybePaper.getPrimaryCategory() : null;
+//            String abstractText = maybePaper != null ? maybePaper.getAbstractText() : null;
+//
+//            NodeResp node = new NodeResp(
+//                    nodeId,
+//                    r.getArxivId(),
+//                    r.getTitle(),
+//                    abstractText,
+//                    String.join(", ", r.getAuthors()),
+//                    primaryCategory,
+//                    r.getPublished());
+//            nodes.add(node);
+//
+//            // similar edge 생성 (center -> recommended)
+//            EdgeResp edge = new EdgeResp(
+//                    null, // edge id 굳이 없으면 null
+//                    "similar",
+//                    arxivId, // source
+//                    r.getArxivId(), // target
+//                    r.getScore(), // weight
+//                    rank++ // rank
+//            );
+//            edges.add(edge);
+//        }
+//
+//        return new GraphResp(nodes, edges);
+//    }
 
     private boolean containsNode(List<NodeResp> nodes, String arxivId) {
         return nodes.stream().anyMatch(n -> arxivId.equals(n.getArXivId()));
@@ -117,6 +119,8 @@ public class GraphService {
         // 1. 중심 논문 정보를 DB에서 조회
         PaperInfo center = paperInfoRepository.findByArxivId(arxivId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAPER_NOT_FOUND));
+
+
 
         // 2. 중심 노드 추가
         NodeResp centerNode = new NodeResp(
@@ -173,6 +177,11 @@ public class GraphService {
                     published);
             nodes.add(node);
 
+            List<String> edgeKeywords = r.keywords();
+            if (edgeKeywords != null && edgeKeywords.size() > 10) {
+                edgeKeywords = edgeKeywords.subList(0, 10); // ★ 너무 길면 상위 10개만
+            }
+
             // similar edge 생성 (center -> recommended)
             EdgeResp edge = new EdgeResp(
                     null, // edge id 필요 없으면 null
@@ -180,7 +189,9 @@ public class GraphService {
                     arxivId, // source
                     r.arxivId(), // target
                     r.totalScore(), // 멀티 피처 종합 점수를 weight로 사용
-                    rank++ // rank
+                    rank++, // rank,
+                    edgeKeywords
+
             );
             edges.add(edge);
         }

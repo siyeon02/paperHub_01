@@ -17,6 +17,14 @@ spring:
     password: spring-pass
     driver-class-name: org.postgresql.Driver
 
+    hikari:
+      maximum-pool-size: 20        # 인스턴스/DB 스펙 보고 10~30 사이
+      minimum-idle: 5
+      connection-timeout: 10000    # 10초. 너무 오래 안 기다리게
+      idle-timeout: 600000         # 10분
+      max-lifetime: 1800000        # 30분
+
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,7 +32,9 @@ spring:
       hibernate:
         default_schema: core
         show_sql: true
-        format_sql: true
+        format_sql: false
+
+
 
 jwt:
   secret:
