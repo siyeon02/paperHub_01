@@ -77,7 +77,9 @@ public class MultiFeatureRecommenderService {
 
     private List<PineconeMatch> computeCosineSimilarity(String arxivId, int topK) {
         try {
+            long t0 = System.currentTimeMillis();
             String json = pineconeClient.queryById(arxivId, topK + 1);
+            log.info("Pinecone queryById took {} ms", System.currentTimeMillis() - t0);
 
             JsonNode root = new ObjectMapper().readTree(json);
             List<PineconeMatch> result = new ArrayList<>();
@@ -478,23 +480,79 @@ public class MultiFeatureRecommenderService {
 
 
     //stage 2
+//    private UserProfile buildUserProfile(Long userId) {
+//        List<UserPaperStats> statsList = userPaperStatsRepository.findByIdUserId(userId);
+//        if (statsList.isEmpty()) {
+//            return new UserProfile();
+//        }
+//
+//        UserProfile profile = new UserProfile();
+//
+//        for (UserPaperStats s : statsList) {
+//            Long paperId = s.getId().getPaperId();
+//            PaperInfo p = paperInfoRepository.findById(paperId).orElse(null);
+//            if (p == null) continue;
+//
+//            String cat = p.getPrimaryCategory();
+//            String venue = p.getVenue();
+//
+//            Double completion = s.getCompletionRatio();  // 0~1 범위 기대
+//            int readTime = s.getTotalReadTimeSec();
+//
+//            if (cat != null && !cat.isBlank()) {
+//                CategoryPref cp = profile.categoryMap
+//                        .computeIfAbsent(cat, k -> new CategoryPref());
+//                if (completion != null) {
+//                    cp.sumCompletion += completion;
+//                    cp.count++;
+//                }
+//                cp.totalReadTimeSec += readTime;
+//            }
+//
+//            if (venue != null && !venue.isBlank()) {
+//                VenuePref vp = profile.venueMap
+//                        .computeIfAbsent(venue, k -> new VenuePref());
+//                if (completion != null) {
+//                    vp.sumCompletion += completion;
+//                    vp.count++;
+//                }
+//                vp.totalReadTimeSec += readTime;
+//            }
+//        }
+//        return profile;
+//    }
+
     private UserProfile buildUserProfile(Long userId) {
         List<UserPaperStats> statsList = userPaperStatsRepository.findByIdUserId(userId);
         if (statsList.isEmpty()) {
             return new UserProfile();
         }
 
+        // 1. user가 읽은 paperId들을 싹 모아서
+        Set<Long> paperIds = new HashSet<>();
+        for (UserPaperStats s : statsList) {
+            paperIds.add(s.getId().getPaperId());
+        }
+
+        // 2. 한 번에 IN 쿼리로 PaperInfo를 다 가져오기
+        List<PaperInfo> papers = paperInfoRepository.findByIdIn(paperIds);
+        Map<Long, PaperInfo> paperMap = new HashMap<>();
+        for (PaperInfo p : papers) {
+            paperMap.put(p.getId(), p);
+        }
+
         UserProfile profile = new UserProfile();
 
+        // 3. 이제 루프에서는 DB 안 타고 Map만 조회
         for (UserPaperStats s : statsList) {
             Long paperId = s.getId().getPaperId();
-            PaperInfo p = paperInfoRepository.findById(paperId).orElse(null);
+            PaperInfo p = paperMap.get(paperId);
             if (p == null) continue;
 
             String cat = p.getPrimaryCategory();
             String venue = p.getVenue();
 
-            Double completion = s.getCompletionRatio();  // 0~1 범위 기대
+            Double completion = s.getCompletionRatio();
             int readTime = s.getTotalReadTimeSec();
 
             if (cat != null && !cat.isBlank()) {
@@ -519,6 +577,7 @@ public class MultiFeatureRecommenderService {
         }
         return profile;
     }
+
 
 
     private double computeUserPreferenceScore(UserProfile profile, PaperInfo candidate) {
