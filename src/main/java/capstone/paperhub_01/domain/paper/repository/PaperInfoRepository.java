@@ -105,8 +105,7 @@ public interface PaperInfoRepository extends JpaRepository<PaperInfo, Long> {
           SELECT p FROM PaperInfo p
           WHERE p.venue IS NOT NULL AND p.venue <> ''
             AND (LOWER(p.venue) = LOWER(:venue)
-                 OR LOWER(p.venue) LIKE CONCAT('%', LOWER(:venue), '%')
-                 OR LOWER(:venue) LIKE CONCAT('%', LOWER(p.venue), '%'))
+                 OR LOWER(p.venue) LIKE CONCAT('%', LOWER(:venue), '%'))
           ORDER BY p.publishedDate DESC
       """)
   List<PaperInfo> findByVenueLike(@Param("venue") String venue, Pageable pageable);
