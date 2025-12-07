@@ -278,6 +278,8 @@ public class MultiFeatureRecommenderService {
             int topK,           // 최종 반환할 개수   (예: 10)
             @Nullable List<String> excludeArxivIds
     ) {
+        log.info("recommendPersonalized() v2 start, userId={}, sourceArxivId={}", userId, sourceArxivId);
+
         PaperInfo source = getPaperMetadata(sourceArxivId);
         if (source == null) {
             return List.of();
@@ -402,7 +404,7 @@ public class MultiFeatureRecommenderService {
         String sourceVenue = source.getVenue();
         boolean useVenueFilter = (sourceVenue != null && !sourceVenue.isBlank());
 
-        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, 200);
+        List<PineconeMatch> sims = computeCosineSimilarity(sourceArxivId, 50);
         List<Candidate> candidates = new ArrayList<>();
 
         for (PineconeMatch match : sims) {
@@ -523,6 +525,8 @@ public class MultiFeatureRecommenderService {
 //    }
 
     private UserProfile buildUserProfile(Long userId) {
+        log.info("buildUserProfile() called for userId={}", userId);
+
         List<UserPaperStats> statsList = userPaperStatsRepository.findByIdUserId(userId);
         if (statsList.isEmpty()) {
             return new UserProfile();
