@@ -39,6 +39,10 @@ public class UserPaperStatsResp {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ==== 최적화 필드 ====
+    private String title;
+    private String status;
+
     public static UserPaperStatsResp from(UserPaperStats s) {
         return UserPaperStatsResp.builder()
                 .userId(s.getId().getUserId())
@@ -65,6 +69,38 @@ public class UserPaperStatsResp {
 
                 .createdAt(s.getCreatedAt())
                 .updatedAt(s.getUpdatedAt())
+                .build();
+    }
+
+    public static UserPaperStatsResp of(UserPaperStats s, String title, String status) {
+        return UserPaperStatsResp.builder()
+                .userId(s.getId().getUserId())
+                .paperId(s.getId().getPaperId())
+
+                .firstOpenedAt(s.getFirstOpenedAt())
+                .lastOpenedAt(s.getLastOpenedAt())
+                .totalOpenCount(s.getTotalOpenCount())
+                .totalReadTimeSec(s.getTotalReadTimeSec())
+                .totalSessions(s.getTotalSessions())
+                .maxSessionTimeSec(s.getMaxSessionTimeSec())
+                .avgSessionTimeSec(s.getAvgSessionTimeSec())
+
+                .lastPageRead(s.getLastPageRead())
+                .maxPageReached(s.getMaxPageReached())
+                .pageCount(s.getPageCount())
+                .completionRatio(s.getCompletionRatio())
+                .isCompleted(s.getIsCompleted())
+
+                .totalHighlightCount(s.getTotalHighlightCount())
+                .totalMemoCount(s.getTotalMemoCount())
+                .lastHighlightAt(s.getLastHighlightAt())
+                .lastMemoAt(s.getLastMemoAt())
+
+                .createdAt(s.getCreatedAt())
+                .updatedAt(s.getUpdatedAt())
+
+                .title(title)
+                .status(status)
                 .build();
     }
 
