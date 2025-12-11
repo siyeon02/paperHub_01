@@ -3,6 +3,7 @@ package capstone.paperhub_01.domain.memo.repository;
 import capstone.paperhub_01.domain.memo.Memo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface MemoRepository extends JpaRepository<Memo, Long> {
@@ -11,4 +12,5 @@ public interface MemoRepository extends JpaRepository<Memo, Long> {
 
     List<Memo> findByAnchorIdIn(List<Long> anchorIds);
 
+    List<Memo> findByAnchorIdInAndCreatedBy(List<Long> anchorIds, String createdBy);
 }

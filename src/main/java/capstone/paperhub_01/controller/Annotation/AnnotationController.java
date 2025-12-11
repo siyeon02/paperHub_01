@@ -66,7 +66,8 @@ public class AnnotationController {
 
     @GetMapping("/page-annotations")
     public ResponseEntity<ApiResult<PageAnnotationsResp>> pageBundle(@AuthenticationPrincipal UserDetailsImpl userDetails, @Valid @ModelAttribute PageAnnotationsReq req) {
-        var dto = pageAnnotationQueryService.getPageBundle(req.getSha256(), req.getPage());
+        Member member = userDetails.getUser();
+        var dto = pageAnnotationQueryService.getPageBundle(req.getSha256(), req.getPage(), member.getId());
         return ResponseEntity.status(HttpStatus.OK).body(ApiResult.success(dto));
     }
 

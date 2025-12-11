@@ -12,4 +12,7 @@ public interface HighlightRepository extends JpaRepository<Highlight, Long> {
     List<Highlight> findByAnchorIdIn(Collection<Long> anchorIds);
 
     long countByAnchor_Id(Long anchorId);
+
+    List<Highlight> findByAnchorIdInAndCreatedBy(List<Long> anchorIds, String createdBy);
+
 }

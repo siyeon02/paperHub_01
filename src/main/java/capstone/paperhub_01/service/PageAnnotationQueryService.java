@@ -21,7 +21,7 @@ public class PageAnnotationQueryService {
     private final MemoRepository memoRepository;
 
     @Transactional(readOnly = true)
-    public PageAnnotationsResp getPageBundle(String sha256, int page) {
+    public PageAnnotationsResp getPageBundle(String sha256, int page, Long memberId) {
         // 1) 앵커 조회
         var anchors = anchorRepository.findByPaperSha256AndPage(sha256, page);
 
@@ -39,10 +39,10 @@ public class PageAnnotationQueryService {
         // 2) 배치 조회 (하이라이트/메모)
         var anchorIds = anchors.stream().map(Anchor::getId).toList();
 
-        var highsByAnchor = highlightRepository.findByAnchorIdIn(anchorIds).stream()
+        var highsByAnchor = highlightRepository.findByAnchorIdInAndCreatedBy(anchorIds, String.valueOf(memberId)).stream()
                 .collect(Collectors.groupingBy(h -> h.getAnchor().getId()));
 
-        var memosByAnchor = memoRepository.findByAnchorIdIn(anchorIds).stream()
+        var memosByAnchor = memoRepository.findByAnchorIdInAndCreatedBy(anchorIds, String.valueOf(memberId)).stream()
                 .collect(Collectors.groupingBy(m -> m.getAnchor().getId()));
 
         // 3) 앵커별 묶음 구성
